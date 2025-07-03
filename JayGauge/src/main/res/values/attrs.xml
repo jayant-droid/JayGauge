@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="JayGauge">
+        <!-- LIGHT (0), DARK (1) or BLUE (2) -->
+        <attr name="gaugeTheme" format="enum">
+            <enum name="light" value="0"/>
+            <enum name="dark" value="1"/>
+            <enum name="blue" value="2"/>
+        </attr>
+
+        <!-- Label for the gauge -->
+        <attr name="gaugeLabel" format="string" />
+
+        <!--  set custom unit -->
+        <attr name="customUnit" format="string" />
+
+        <!--  set demoMode unit -->
+        <attr name="demoMode" format="boolean" />
+
+        <!-- Unit for the gauge -->
+        <attr name="gaugeUnit" format="enum" >
+            <enum name="CELSIUS" value="0"/>
+            <enum name="FAHRENHEIT" value="1"/>
+            <enum name="KPH" value="2"/>
+            <enum name="KPH_KM_H" value="3"/>
+            <enum name="MPH_MI_H" value="4"/>
+            <enum name="MPH" value="5"/>
+            <enum name="GHZ" value="6"/>
+            <enum name="MHZ" value="7"/>
+            <enum name="HZ" value="8"/>
+            <enum name="PERCENTAGE" value="9"/>
+            <enum name="GB" value="10"/>
+            <enum name="MB" value="11"/>
+            <enum name="NONE" value="12"/>
+        </attr>
+
+        <!-- Arc color theme -->
+        <attr name="arcColorTheme" format="enum">
+            <enum name="Default" value="0" />
+            <enum name="OceanBreeze" value="1" />
+            <enum name="Sunset" value="2" />
+            <enum name="Aurora" value="3" />
+            <enum name="CitrusPunch" value="4" />
+            <enum name="NeonParty" value="5" />
+            <enum name="RoyalPurple" value="6" />
+            <enum name="MintWave" value="16" />
+            <enum name="RoyalMystic" value="17" />
+            <enum name="AquaFusion" value="18" />
+            <enum name="DeepOcean" value="19" />
+            <enum name="MintLagoon" value="20" />
+            <enum name="PurpleBliss" value="21" />
+            <enum name="CitrusSunrise" value="22" />
+            <enum name="FlamingoGlow" value="23" />
+            <enum name="CoralTwist" value="24" />
+            <enum name="SunsetPink" value="25" />
+            <enum name="PurpleHorizon" value="26" />
+            <enum name="OrangeBlaze" value="27" />
+            <enum name="PinkBlush" value="28" />
+            <enum name="AquaWave" value="29" />
+            <enum name="TealMist" value="30" />
+            <enum name="VioletGlow" value="31" />
+            <enum name="SunsetFire" value="32" />
+            <enum name="GreenPulse" value="33" />
+            <enum name="MintSky" value="34" />
+            <enum name="Ryzen" value="35" />
+            <enum name="LavenderMist" value="36" />
+            <enum name="Nvidia" value="37" />
+            <enum name="Intel" value="38" />
+        </attr>
+
+
+
+        <attr name="minValue" format="float"/>
+        <attr name="maxValue" format="float"/>
+
+    </declare-styleable>
+</resources>
