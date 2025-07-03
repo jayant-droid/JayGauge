@@ -1,4 +1,4 @@
-package com.jcorp.jaygauge
+package com.jcorp.jaygauge.sample
 
 import kotlin.random.Random
 

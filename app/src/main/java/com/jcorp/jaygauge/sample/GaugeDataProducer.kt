@@ -1,8 +1,6 @@
-package com.jcorp.jaygauge
+package com.jcorp.jaygauge.sample
 
 
-import com.jcorp.jaygauge.AppUtils.getRandomFloat
-import com.jcorp.jaygauge.AppUtils.getRandomInt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -17,7 +15,7 @@ object GaugeDataProducer {
     fun startFloatDataGeneration(min: Float, max: Float, intervalMs: Long, onEmit:(data:Float)->Unit): Job {
         val floatJob = CoroutineScope(Dispatchers.IO).launch {
             while (isActive) {
-                val randomValue = getRandomFloat(min, max)
+                val randomValue = AppUtils.getRandomFloat(min, max)
                 onEmit(randomValue)
                 delay(intervalMs)
             }
@@ -29,7 +27,7 @@ object GaugeDataProducer {
     fun startIntDataGeneration(min: Int, max: Int, intervalMs: Long, onEmit:(data:Int)->Unit): Job {
         val intJob = CoroutineScope(Dispatchers.IO).launch {
             while (isActive) {
-                val randomValue = getRandomInt(min, max)
+                val randomValue = AppUtils.getRandomInt(min, max)
                 onEmit(randomValue)
                 delay(intervalMs)
             }

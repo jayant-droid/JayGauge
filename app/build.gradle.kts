@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.jcorp.jaygauge"
+    namespace = "com.jcorp.jaygauge.sample"
     compileSdk = 35
 
     defaultConfig {

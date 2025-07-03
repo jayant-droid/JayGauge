@@ -1,4 +1,4 @@
-package com.jcorp.jaygauge
+package com.jcorp.jaygauge.sample
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater

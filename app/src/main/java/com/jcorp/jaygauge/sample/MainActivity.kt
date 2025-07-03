@@ -1,4 +1,4 @@
-package com.jcorp.jaygauge
+package com.jcorp.jaygauge.sample
 
 import android.os.Bundle
 import android.view.View
@@ -6,9 +6,12 @@ import android.widget.AdapterView
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import com.jcorp.jaygauge.GaugeArcColorTheme
+import com.jcorp.jaygauge.GaugeTheme
 
 import com.jcorp.jaygauge.JayGauge.GaugeListener
-import com.jcorp.jaygauge.databinding.ActivityMainBinding
+import com.jcorp.jaygauge.Units
+import com.jcorp.jaygauge.sample.databinding.ActivityMainBinding
 import kotlin.getValue
 
 class MainActivity : AppCompatActivity() {

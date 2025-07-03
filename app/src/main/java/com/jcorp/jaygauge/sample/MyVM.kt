@@ -1,4 +1,4 @@
-package com.jcorp.jaygauge
+package com.jcorp.jaygauge.sample
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
