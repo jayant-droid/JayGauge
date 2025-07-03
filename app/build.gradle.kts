@@ -48,7 +48,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
     //implementation(project(":JayGauge"))
-    implementation("com.github.jayant-droid:JayGauge:v1.0-Alpha")
+    implementation("com.github.jayant-droid:JayGauge:v1.0-Alpha1")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
