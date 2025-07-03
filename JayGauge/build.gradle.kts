@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     id("kotlin-kapt")
+    id("maven-publish")
 }
 
 android {
@@ -38,6 +39,19 @@ android {
     }
 }
 
+publishing {
+    publications {
+        create<MavenPublication>("release") {
+            groupId = "com.jcorp"
+            artifactId = "jaygauge"
+            version = "1.0.0-Alpha"
+
+            afterEvaluate {
+                from(components["release"])
+            }
+        }
+    }
+}
 dependencies {
 
     implementation(libs.androidx.core.ktx)
