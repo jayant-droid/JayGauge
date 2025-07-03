@@ -21,6 +21,7 @@ import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import androidx.core.animation.doOnEnd
 import androidx.core.graphics.scale
+import androidx.core.graphics.toColorInt
 import com.jcorp.jaygauge.GaugeUtils.computeNeedleJumpDuration
 import com.jcorp.jaygauge.GaugeUtils.getAnimValue
 import com.jcorp.jaygauge.GaugeUtils.hasDecimal
@@ -295,8 +296,9 @@ class JayGauge @JvmOverloads constructor(
         intValueAnimator?.start()
     }
 
-
+    var isStrokeWidthUpdated = false
     private fun updateDynamicStrokeWidths(radius: Float) {
+        if (isStrokeWidthUpdated) return
         // You can tweak these factors to taste
         val baseStrokeWidth = (radius * 0.22f).coerceIn(8f, 100f)  // For progress arc
         val bgStrokeWidth = baseStrokeWidth * 0.83f  // For bg arc
@@ -310,75 +312,134 @@ class JayGauge @JvmOverloads constructor(
         // Also scale glow blur if needed:
         glowArcPaint.maskFilter =
             BlurMaskFilter(baseStrokeWidth.coerceAtLeast(8f), BlurMaskFilter.Blur.NORMAL)
+        isStrokeWidthUpdated = true
 
     }
 
     private var arcRadius = 0f
+    private var centerX = 0f
+    private var centerY = 0f
 
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        val centerX = width / 2f
-        val centerY = height / 2f
-        val radius = min(centerX, centerY) * 0.88f
-        arcRadius = radius
+        if (arcRadius == 0f) {
+            setMainArcRadius()
+        }
 
         setLayerType(LAYER_TYPE_SOFTWARE, null)
 
         // ✅ Dynamically update stroke widths!
-        updateDynamicStrokeWidths(radius)
+        updateDynamicStrokeWidths(arcRadius)
 
         //draw arc
-        drawArc(canvas, centerX, centerY, radius)
+        drawArc(canvas, centerX, centerY, arcRadius)
 
         //draw tick Text Labels
-        drawTickLabels(canvas, centerX, centerY, radius)
+        drawTickLabels(canvas, centerX, centerY, arcRadius)
 
         //draw Needle
-        drawNeedle(canvas, centerX, centerY, radius)
+        drawNeedle(canvas, centerX, centerY, arcRadius)
 
         //draw Gauge Name, Value  and Unit
-        drawGaugeNameUnitAndText(canvas, centerX, centerY, radius)
+        drawGaugeNameAndUnit(canvas, centerX, centerY, arcRadius)
 
-        drawNeedleAnchor(canvas, centerX, centerY, radius)
+        //center circle
+        drawNeedleAnchor(canvas, centerX, centerY, arcRadius)
 
 
+    }
+
+    private fun setMainArcRadius() {
+        centerX = width / 2f
+        centerY = height / 2f
+        arcRadius = min(centerX, centerY) * 0.88f
+    }
+
+    // needle anchor
+    private data class NeedleAnchor(
+        val outerRadius: Float,
+        val innerRadius: Float, val outX: Float, val outY: Float,
+        val inX: Float, val inY: Float
+    )
+
+    private var needleAnchor: NeedleAnchor? = null
+
+    // Example: use same color as your needle but lighter shades
+    private val anchorOuterColor by lazy { "#CCCCCC".toColorInt() }// lighter ring
+    private val anchorInnerColor by lazy { "#EEEEEE".toColorInt() }// lighter hub
+
+    // Outer ring
+    private val ringPaint by lazy {
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = anchorOuterColor
+        }
+    }
+
+
+    // Center hub
+    val hubPaint by lazy {
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = anchorInnerColor
+        }
     }
 
     private fun drawNeedleAnchor(
         canvas: Canvas, centerX: Float, centerY: Float, radius: Float
     ) {
+        if (needleAnchor != null) {
+            needleAnchor?.let {
+                // 1️⃣ Outer ring
+                canvas.drawCircle(it.outX, it.outY, it.outerRadius, ringPaint)
+
+                // 2️⃣ Inner hub
+                canvas.drawCircle(it.inX, it.inY, it.innerRadius, hubPaint)
+            }
+            return
+        }
         // Size relative to gauge size
         val outerRadius = radius * 0.117f
         val innerRadius = outerRadius * 0.7f
-
-        // Example: use same color as your needle but lighter shades
-        val anchorOuterColor = Color.parseColor("#CCCCCC") // lighter ring
-        val anchorInnerColor = Color.parseColor("#EEEEEE") // lighter hub
-
-        // Outer ring
-        val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.FILL
-            color = anchorOuterColor
-        }
-
-
-        // Center hub
-        val hubPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.FILL
-            color = anchorInnerColor
-        }
 
         // 1️⃣ Outer ring
         canvas.drawCircle(centerX, centerY, outerRadius, ringPaint)
 
         // 2️⃣ Inner hub
         canvas.drawCircle(centerX, centerY, innerRadius, hubPaint)
+        needleAnchor = NeedleAnchor(outerRadius, innerRadius, centerX, centerY, centerX, centerY)
     }
+
+    //tick labels
+    private data class TickLabel(
+        val labelX: Float, val labelY: Float, val tickValueText: String,
+        val labelValue: Float
+    )
+
+    private var isTickLabelPrepared = false
+    private val tickLabels = mutableListOf<TickLabel>()
+    private val numLabels = 9
+    private val labelMargin = (maxValue - minValue) * 0.02f
 
     private fun drawTickLabels(
         canvas: Canvas, centerX: Float, centerY: Float, radius: Float
     ) {
+        if (isTickLabelPrepared) {
+            tickLabels.forEach {
+                //only calculate if needle reaches the label
+                tickTextPaint.color = if (currentValue >= it.labelValue - labelMargin) {
+                    getTextColor()
+                } else {
+                    getTickDisabledColor()
+                }
+                canvas.drawText(
+                    it.tickValueText, it.labelX, it.labelY, tickTextPaint
+                )
+            }
+            return
+        }
+        tickLabels.clear()
         val gaugePaddingFraction = 0.05f // tweak if you want margin at edges
         val availableRadius = radius * (1f - gaugePaddingFraction)
 
@@ -414,7 +475,6 @@ class JayGauge @JvmOverloads constructor(
         }
         tickTextPaint.textSize = availableRadius * tickTextSizeFraction
 
-        val numLabels = 9
         val interval = (maxValue - minValue) / (numLabels - 1)
 
         // ✅ Dynamic label radius based on gauge radius:
@@ -432,8 +492,7 @@ class JayGauge @JvmOverloads constructor(
             val labelY =
                 centerY + labelRadius * sin(angleRad).toFloat() + tickTextPaint.textSize / 3
 
-            val margin = (maxValue - minValue) * 0.02f
-            tickTextPaint.color = if (currentValue >= labelValue - margin) {
+            tickTextPaint.color = if (currentValue >= labelValue - labelMargin) {
                 getTextColor()
             } else {
                 getTickDisabledColor()
@@ -443,11 +502,14 @@ class JayGauge @JvmOverloads constructor(
                 Units.GHZ -> String.format(Locale.US, "%.1f", labelValue)
                 else -> labelValue.toInt().toString()
             }
+            val tickLabel = TickLabel(labelX, labelY, tickValueText, labelValue)
+            tickLabels.add(tickLabel)
 
             canvas.drawText(
                 tickValueText, labelX, labelY, tickTextPaint
             )
         }
+        isTickLabelPrepared = true
     }
 
 
@@ -485,7 +547,7 @@ class JayGauge @JvmOverloads constructor(
             doOnEnd {
                 postDelayed({
                     animateNextSweep() // chain next sweep
-                },pollInterval) // delay before next sweep)
+                }, pollInterval) // delay before next sweep)
 
             }
 
@@ -494,9 +556,31 @@ class JayGauge @JvmOverloads constructor(
     }
 
 
+    data class Arc(val rect: RectF)
+    data class MainArc(val bgArc: Arc, val glowArc:Arc, val progArc:Arc)
+
+    private var mainArc: MainArc? = null
     private fun drawArc(
         canvas: Canvas, centerX: Float, centerY: Float, radius: Float
     ) {
+        if (mainArc != null) {
+            mainArc?.bgArc?.let { arc ->
+                // 1️⃣ Draw background arc (full sweep)
+                canvas.drawArc(arc.rect, startAngle, sweepAngle, false, bgArcPaint)
+            }
+            // 2️⃣ Calculate current sweep angle for progress
+            val ratio = (currentValue - minValue) / (maxValue - minValue)
+            val progressSweep = sweepAngle * ratio
+            mainArc?.glowArc?.let { arc->
+                // First: wider, softer glow arc
+                canvas.drawArc(arc.rect, startAngle, progressSweep, false, glowArcPaint)
+            }
+            mainArc?.progArc?.let { arc->
+                // 4️⃣ Draw progress arc
+                canvas.drawArc(arc.rect, startAngle, progressSweep, false, progressArcPaint)
+            }
+            return
+        }
         val rect = RectF(
             centerX - radius, centerY - radius, centerX + radius, centerY + radius
         )
@@ -536,6 +620,7 @@ class JayGauge @JvmOverloads constructor(
         progressArcPaint.shader = arcGradient
         // 4️⃣ Draw progress arc
         canvas.drawArc(rect, startAngle, progressSweep, false, progressArcPaint)
+        mainArc = MainArc(bgArc = Arc(rect), glowArc = Arc(glowRect), progArc = Arc(rect))
     }
 
     private fun getScaledNeedleBitmap(radius: Float): Bitmap {
@@ -558,6 +643,7 @@ class JayGauge @JvmOverloads constructor(
         }
         return scaledNeedleBitmap!!
     }
+
 
     private fun drawNeedle(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {
         //Scale needle size as per arc size
@@ -585,9 +671,25 @@ class JayGauge @JvmOverloads constructor(
 
     }
 
-    private fun drawGaugeNameUnitAndText(
+    data class GaugeReading(val unitText: String, val unitX:Float,val unitY:Float,val valueX:Float,val valueY:Float)
+    var gaugeUnitAndValue:GaugeReading?=null
+    var onPrepareGaugeValueColorSet: Boolean=false
+    private fun drawGaugeNameAndUnit(
         canvas: Canvas, centerX: Float, centerY: Float, radius: Float
     ) {
+        if(gaugeUnitAndValue != null){
+            gaugeUnitAndValue?.let {
+                if(isPrepared && !onPrepareGaugeValueColorSet) {
+                    unitTextPaint.color = if (isPrepared) getTextColor() else grayTextColor
+                    valueTextPaint.color = if (isPrepared) getTextColor() else grayTextColor
+                    onPrepareGaugeValueColorSet = true
+                }
+                val valueText = getFormattedValueText()
+                canvas.drawText(valueText, it.valueX,it.valueY, valueTextPaint)
+                canvas.drawText(it.unitText, it.unitX, it.unitY, unitTextPaint)
+            }
+            return
+        }
         val isCustomUnit = customUnit != null
         val unitText = if (isCustomUnit) {
             customUnit ?: ""
@@ -683,6 +785,7 @@ class JayGauge @JvmOverloads constructor(
         val actualValueX =
             valueX - maxValueBounds.width() / 2f + offset + actualValueBounds.width() / 2f
 
+        gaugeUnitAndValue = GaugeReading(unitText=unitText, unitX=unitX,unitY=baseY,valueX=actualValueX,valueY=baseY)
         canvas.drawText(valueText, actualValueX, baseY, valueTextPaint)
         canvas.drawText(unitText, unitX, baseY, unitTextPaint)
     }
@@ -816,13 +919,13 @@ class JayGauge @JvmOverloads constructor(
     //exposed functions to control JayGauge
 
     override fun demoMode(isOn: Boolean) {
-        if(isOn) {
+        if (isOn) {
             if (isSweeping) return // already running
             isSweeping = true
             if (!isPreparing && isPrepared) {
                 animateNextSweep()
             }
-        }else{
+        } else {
             isSweeping = false
             if (sweepAnimator?.isStarted == true) sweepAnimator?.cancel()
         }
@@ -834,7 +937,7 @@ class JayGauge @JvmOverloads constructor(
     }
 
     override fun setProgress(progress: Float) {
-        if(isSweeping) return
+        if (isSweeping) return
         if (progress.hasDecimal()) {
             setValue(progress)
         } else {
