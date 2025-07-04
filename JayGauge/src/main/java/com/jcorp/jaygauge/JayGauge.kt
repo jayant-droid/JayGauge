@@ -54,12 +54,17 @@ class JayGauge @JvmOverloads constructor(
 
     //class level private variables
     private var gaugeTheme: GaugeTheme = GaugeTheme.LIGHT
-    private var currentValue: Float = 0f
+    private var minValue = 0f
+    private var maxValue = 100f
+    private var currentValue: Float = minValue
     private var floatValueAnimator: ValueAnimator? = null
     private var intValueAnimator: ValueAnimator? = null
 
     private var sweepAnimator: ValueAnimator? = null
     private var isSweeping = false
+
+    private var numOfLabels = 9
+
 
     //paint objects
     private val bgArcPaint by lazy {
@@ -122,8 +127,7 @@ class JayGauge @JvmOverloads constructor(
         }
     }
 
-    private var minValue = 0f
-    private var maxValue = 100f
+
 
     // You can adjust these:
     private val startAngle by lazy { 140f }
@@ -164,10 +168,25 @@ class JayGauge @JvmOverloads constructor(
     private fun setupAttributes() {
         //gauge Theme
         setUpTheme()
+        setUpNumOfTicks()
         setUpUnit()
         setUpMinMax()
+        setUpProgress()
         setUpArcTheme()
         setUpDemoMode()
+    }
+
+    private fun setUpProgress() {
+        val value = typedArray.getFloat(R.styleable.JayGauge_progress, minValue)
+        currentValue= value.coerceIn(minValue,maxValue)
+        invalidate()
+    }
+
+    private fun setUpNumOfTicks() {
+        numOfLabels =
+            typedArray.getInt(R.styleable.JayGauge_numOfTicks, numOfLabels)
+        isTickLabelPrepared=false
+        invalidate()
     }
 
     private fun setUpDemoMode() {
@@ -252,8 +271,13 @@ class JayGauge @JvmOverloads constructor(
         AccelerateDecelerateInterpolator()
     }
 
+
     private fun setValue(targetValue: Float) {
-        val clamped = targetValue.coerceIn(minValue, maxValue)
+        var progress=targetValue
+        if(targetValue < minValue){
+            progress=minValue
+        }
+        val clamped = progress.coerceIn(minValue, maxValue)
         // Cancel previous animator if running
         floatValueAnimator?.cancel()
 
@@ -275,7 +299,11 @@ class JayGauge @JvmOverloads constructor(
     }
 
     private fun setValue(targetValue: Int) {
-        val clamped = targetValue.coerceIn(minValue.toInt(), maxValue.toInt())
+        var progress=targetValue
+        if(targetValue < minValue){
+            progress=minValue.toInt()
+        }
+        val clamped = progress.coerceIn(minValue.toInt(), maxValue.toInt())
 
         // Cancel previous animator if running
         intValueAnimator?.cancel()
@@ -323,6 +351,9 @@ class JayGauge @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        if(minValue == -1f && maxValue==-1f){
+            return
+        }
         if (arcRadius == 0f) {
             setMainArcRadius()
         }
@@ -332,17 +363,18 @@ class JayGauge @JvmOverloads constructor(
         // ✅ Dynamically update stroke widths!
         updateDynamicStrokeWidths(arcRadius)
 
-        //draw arc
-        drawArc(canvas, centerX, centerY, arcRadius)
+        //draw Gauge Name, Value  and Unit
+        drawGaugeUnitAndValue(canvas, centerX, centerY, arcRadius)
 
         //draw tick Text Labels
         drawTickLabels(canvas, centerX, centerY, arcRadius)
 
+        //draw arc
+        drawArc(canvas, centerX, centerY, arcRadius)
+
         //draw Needle
         drawNeedle(canvas, centerX, centerY, arcRadius)
 
-        //draw Gauge Name, Value  and Unit
-        drawGaugeUnitAndValue(canvas, centerX, centerY, arcRadius)
 
         //center circle
         drawNeedleAnchor(canvas, centerX, centerY, arcRadius)
@@ -419,13 +451,12 @@ class JayGauge @JvmOverloads constructor(
 
     private var isTickLabelPrepared = false
     private val tickLabels = mutableListOf<TickLabel>()
-    private val numLabels = 9
 
     //private val labelHighlightOffset = (maxValue - minValue) * 0.02f
     //this makes highlight to appear before arc reaches it.
     // for error correction, not needed with curr logic
     private val labelHighlightOffset = 0f
-
+        val defaultNumOfLabels=9
     private fun drawTickLabels(
         canvas: Canvas, centerX: Float, centerY: Float, radius: Float
     ) {
@@ -446,6 +477,20 @@ class JayGauge @JvmOverloads constructor(
         tickLabels.clear()
         val gaugePaddingFraction = 0.05f // tweak if you want margin at edges
         val availableRadius = radius * (1f - gaugePaddingFraction)
+        var percentageDelta=0f
+        var inCreaseTextSize=false
+        if(defaultNumOfLabels != numOfLabels){
+            val labelSizeDiff=if(numOfLabels > defaultNumOfLabels){
+                inCreaseTextSize = false
+                numOfLabels-defaultNumOfLabels
+            }else {
+                inCreaseTextSize = true
+                defaultNumOfLabels-numOfLabels
+            }
+            percentageDelta=(labelSizeDiff.toFloat()/defaultNumOfLabels)*100
+            percentageDelta=percentageDelta
+
+        }
 
         var tickTextSizeFraction = when (unit) {
             Units.TEMPERATURE_C, Units.TEMPERATURE_F -> {
@@ -464,7 +509,15 @@ class JayGauge @JvmOverloads constructor(
                 0.22f
             }
         }
-        val labelRadiusFraction = when (unit) {
+        if(percentageDelta > 0f) {
+            val changeInTextSize=(((tickTextSizeFraction * (percentageDelta/1.8f)) / 100))
+            tickTextSizeFraction = if(inCreaseTextSize) {
+                tickTextSizeFraction + changeInTextSize
+            }else{
+                tickTextSizeFraction - changeInTextSize
+            }
+        }
+        var labelRadiusFraction = when (unit) {
             Units.TEMPERATURE_C, Units.TEMPERATURE_F -> {
                 0.70f
             }
@@ -477,17 +530,25 @@ class JayGauge @JvmOverloads constructor(
                 0.73f
             }
         }
-        tickTextPaint.textSize = availableRadius * tickTextSizeFraction
+        if(percentageDelta > 0f) {
+            val changeInLabelRadius=(((labelRadiusFraction * (percentageDelta/10)) / 100))
+            labelRadiusFraction = if(inCreaseTextSize) {
+                labelRadiusFraction - changeInLabelRadius
+            }else{
+                labelRadiusFraction + changeInLabelRadius
+            }
+        }
+        tickTextPaint.textSize = (availableRadius * tickTextSizeFraction).coerceIn(42f,100f)
 
-        val interval = (maxValue - minValue) / (numLabels - 1)
+        val interval = (maxValue - minValue) / (numOfLabels - 1)
 
         // ✅ Dynamic label radius based on gauge radius:
         val labelRadius =
-            radius * labelRadiusFraction // tweak 0.8 ~ 0.85 for style this affects spacing between
+            (radius * labelRadiusFraction).coerceAtMost(radius-(progressArcPaint.strokeWidth * 0.90f)) // tweak 0.8 ~ 0.85 for style this affects spacing between
         // gauge arc and text labels
 
-        for (i in 0 until numLabels) {
-            val angleDeg = startAngle + i * (sweepAngle / (numLabels - 1))
+        for (i in 0 until numOfLabels) {
+            val angleDeg = startAngle + i * (sweepAngle / (numOfLabels - 1))
             val angleRad = Math.toRadians(angleDeg.toDouble())
 
             val labelValue = minValue + i * interval
@@ -581,6 +642,7 @@ class JayGauge @JvmOverloads constructor(
     private fun drawArc(
         canvas: Canvas, centerX: Float, centerY: Float, radius: Float
     ) {
+        if(minValue == -1f && maxValue==-1f){return}
         if (mainArc != null) {
             mainArc?.bgArc?.let { arc ->
                 // 1️⃣ Draw background arc (full sweep)
@@ -588,7 +650,7 @@ class JayGauge @JvmOverloads constructor(
             }
             // 2️⃣ Calculate current sweep angle for progress
             val ratio = (currentValue - minValue) / (maxValue - minValue)
-            val progressSweep = sweepAngle * ratio
+            val progressSweep = (sweepAngle * ratio)
             mainArc?.glowArc?.let { arc ->
                 // First: wider, softer glow arc
                 canvas.drawArc(arc.rect, startAngle, progressSweep, false, glowArcPaint)
@@ -607,7 +669,8 @@ class JayGauge @JvmOverloads constructor(
         canvas.drawArc(rect, startAngle, sweepAngle, false, bgArcPaint)
 
         // 2️⃣ Calculate current sweep angle for progress
-        val ratio = (currentValue - minValue) / (maxValue - minValue)
+        val safeCurrent = currentValue.coerceIn(minValue, maxValue)
+        val ratio = (safeCurrent - minValue) / (maxValue - minValue)
         val progressSweep = sweepAngle * ratio
 
         // 3️⃣ Create sweep gradient for progress arc
@@ -829,9 +892,9 @@ class JayGauge @JvmOverloads constructor(
         val isCustomUnit = customUnit != null
 
         val pattern = if (isCustomUnit) {
-            "000"
+            if(minValue !=0f){minValue.toString()}else{"000"}
         } else {
-            unit.valuePattern
+            if(minValue !=0f){minValue.toString()}else{unit.valuePattern}
         }
 
         return when {
@@ -927,7 +990,7 @@ class JayGauge @JvmOverloads constructor(
         prepareAnimator?.cancel()
 
         // Forward sweep: 0 -> max
-        if(fwdSweepAnimator ==null) {
+        if(fwdSweepAnimator == null) {
             fwdSweepAnimator = ValueAnimator.ofFloat(minValue, maxValue).apply {
                 duration = sweepDuration
                 interpolator = fwdReverseInterpolator
@@ -999,12 +1062,17 @@ class JayGauge @JvmOverloads constructor(
         }
     }
 
-    override fun setMinMax(min: Float, max: Float) {
+    override fun setMinValue(min: Float) {
         this.minValue = min
-        this.maxValue = max
-        isTickLabelPrepared = false
+        currentValue=min
         invalidate()
     }
+
+    override fun setMaxValue( max: Float) {
+        this.maxValue = max
+        invalidate()
+    }
+
 
 
     override fun setUnit(unit: Units) {
@@ -1023,9 +1091,16 @@ class JayGauge @JvmOverloads constructor(
         this.gaugeListener = gaugeListener
     }
 
+    override fun setNumOfTicks(numOfTicks: Int) {
+        numOfLabels=numOfTicks
+        invalidate()
+    }
+
     override fun setCustomUnit(cUnit: String) {
         customUnit = cUnit
         invalidate()
     }
+    override fun getMin():Float=minValue
+    override fun getMax():Float=maxValue
 
 }

@@ -8,9 +8,6 @@
             <enum name="blue" value="2"/>
         </attr>
 
-        <!-- Label for the gauge -->
-        <attr name="gaugeLabel" format="string" />
-
         <!--  set custom unit -->
         <attr name="customUnit" format="string" />
 
@@ -72,6 +69,9 @@
 
         <attr name="minValue" format="float"/>
         <attr name="maxValue" format="float"/>
+        <attr name="progress" format="float"/>
+        <attr name="numOfTicks" format="integer"/>
+
 
     </declare-styleable>
 </resources>
