@@ -47,14 +47,13 @@ class MainActivity : AppCompatActivity() {
             setArcTheme(GaugeArcColorTheme.LavenderMist)
             setMinMax(0f,100f)
             setUnit(Units.TEMPERATURE_C)
-            demoMode(true)
         }
         //gauge one has demo mode on
         //will show progress changes automatically
 
         //set gaugeListener to listen for callbacks
         //wait till gauge has warmed up, then start setting progress
-        binding.gaugeTwo.gaugeListener=object : GaugeListener{
+        binding.gaugeTwo.setGaugeListener(object : GaugeListener{
             override fun onGaugePreparing() {
                 //wait for  the warm up animation
             }
@@ -66,9 +65,9 @@ class MainActivity : AppCompatActivity() {
 
 
             }
-        }
+        })
 
-        binding.gaugeThree.gaugeListener=object : GaugeListener{
+        binding.gaugeThree.setGaugeListener(object : GaugeListener{
             override fun onGaugePreparing() {
                 //wait for  the warm up animation
             }
@@ -79,7 +78,7 @@ class MainActivity : AppCompatActivity() {
                 viewModel.startTempGauge(0f,100f)
             }
 
-        }
+        })
 
     }
 
