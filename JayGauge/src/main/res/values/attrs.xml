@@ -67,8 +67,8 @@
 
 
 
-        <attr name="minValue" format="float"/>
-        <attr name="maxValue" format="float"/>
+        <attr name="minProgress" format="float"/>
+        <attr name="maxProgress" format="float"/>
         <attr name="progress" format="float"/>
         <attr name="numOfTicks" format="integer"/>
 

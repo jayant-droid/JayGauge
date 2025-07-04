@@ -215,8 +215,8 @@ class JayGauge @JvmOverloads constructor(
     }
 
     private fun setUpMinMax() {
-        minValue = typedArray.getFloat(R.styleable.JayGauge_minValue, 0f)
-        maxValue = typedArray.getFloat(R.styleable.JayGauge_maxValue, 100f)
+        minValue = typedArray.getFloat(R.styleable.JayGauge_minProgress, 0f)
+        maxValue = typedArray.getFloat(R.styleable.JayGauge_maxProgress, 100f)
         invalidate()
     }
 
