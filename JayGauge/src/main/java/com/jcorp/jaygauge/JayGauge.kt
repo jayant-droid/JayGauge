@@ -273,6 +273,7 @@ class JayGauge @JvmOverloads constructor(
 
 
     private fun setValue(targetValue: Float) {
+        var isInit=false
         var progress=targetValue
         if(targetValue < minValue){
             progress=minValue
@@ -281,7 +282,12 @@ class JayGauge @JvmOverloads constructor(
         // Cancel previous animator if running
         floatValueAnimator?.cancel()
 
-        floatValueAnimator = ValueAnimator.ofFloat(currentValue, clamped)
+        if(floatValueAnimator == null){
+            isInit=true
+            floatValueAnimator = ValueAnimator.ofFloat(currentValue, clamped)
+        }else{
+            floatValueAnimator?.setFloatValues(currentValue,clamped)
+        }
         floatValueAnimator?.duration = computeNeedleJumpDuration(
             currentValue = currentValue,
             clamped = clamped.toFloat(),
@@ -290,15 +296,20 @@ class JayGauge @JvmOverloads constructor(
 
             pollingInterval = pollInterval
         )
-        floatValueAnimator?.interpolator = valueInterpolator
-        floatValueAnimator?.addUpdateListener {
-            currentValue = getAnimValue(it.animatedValue)
-            invalidate()
+        if(isInit || floatValueAnimator?.interpolator ==null) {
+            floatValueAnimator?.interpolator = valueInterpolator
+        }
+        if(isInit) {
+            floatValueAnimator?.addUpdateListener {
+                currentValue = getAnimValue(it.animatedValue)
+                invalidate()
+            }
         }
         floatValueAnimator?.start()
     }
 
     private fun setValue(targetValue: Int) {
+        var isInit=false
         var progress=targetValue
         if(targetValue < minValue){
             progress=minValue.toInt()
@@ -308,7 +319,12 @@ class JayGauge @JvmOverloads constructor(
         // Cancel previous animator if running
         intValueAnimator?.cancel()
 
-        intValueAnimator = ValueAnimator.ofInt(currentValue.toInt(), clamped)
+        if(intValueAnimator == null){
+            isInit=true
+            intValueAnimator = ValueAnimator.ofInt(currentValue.toInt(), clamped)
+        }else{
+            intValueAnimator?.setIntValues(currentValue.toInt(),clamped)
+        }
         intValueAnimator?.duration = computeNeedleJumpDuration(
             currentValue = currentValue,
             clamped = clamped.toFloat(),
@@ -316,17 +332,20 @@ class JayGauge @JvmOverloads constructor(
             maxValue = maxValue,
             pollingInterval = pollInterval
         )
-        intValueAnimator?.interpolator = valueInterpolator
-        intValueAnimator?.addUpdateListener {
-            currentValue = getAnimValue(it.animatedValue)
-            invalidate()
+        if(isInit || intValueAnimator?.interpolator ==null) {
+            intValueAnimator?.interpolator = valueInterpolator
+        }
+        if(isInit) {
+            intValueAnimator?.addUpdateListener {
+                currentValue = getAnimValue(it.animatedValue)
+                invalidate()
+            }
         }
         intValueAnimator?.start()
     }
 
-    private var isStrokeWidthUpdated = false
+
     private fun updateDynamicStrokeWidths(radius: Float) {
-        if (isStrokeWidthUpdated) return
         // You can tweak these factors to taste
         val baseStrokeWidth = (radius * 0.22f).coerceIn(8f, 100f)  // For progress arc
         val bgStrokeWidth = baseStrokeWidth * 0.83f  // For bg arc
@@ -340,8 +359,6 @@ class JayGauge @JvmOverloads constructor(
         // Also scale glow blur if needed:
         glowArcPaint.maskFilter =
             BlurMaskFilter(baseStrokeWidth.coerceAtLeast(8f), BlurMaskFilter.Blur.NORMAL)
-        isStrokeWidthUpdated = true
-
     }
 
     private var arcRadius = 0f
@@ -351,17 +368,13 @@ class JayGauge @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        if(minValue == -1f && maxValue==-1f){
-            return
-        }
+        //need to call these once only
         if (arcRadius == 0f) {
             setMainArcRadius()
+            setLayerType(LAYER_TYPE_SOFTWARE, null)
+            // ✅ Dynamically update stroke widths!
+            updateDynamicStrokeWidths(arcRadius)
         }
-
-        setLayerType(LAYER_TYPE_SOFTWARE, null)
-
-        // ✅ Dynamically update stroke widths!
-        updateDynamicStrokeWidths(arcRadius)
 
         //draw Gauge Name, Value  and Unit
         drawGaugeUnitAndValue(canvas, centerX, centerY, arcRadius)
@@ -375,11 +388,8 @@ class JayGauge @JvmOverloads constructor(
         //draw Needle
         drawNeedle(canvas, centerX, centerY, arcRadius)
 
-
         //center circle
         drawNeedleAnchor(canvas, centerX, centerY, arcRadius)
-
-
     }
 
     private fun setMainArcRadius() {
@@ -606,7 +616,7 @@ class JayGauge @JvmOverloads constructor(
         }
     }
 
-    val onEnd: (Animator) -> Unit by lazy {
+    private val onEnd: (Animator) -> Unit by lazy {
         {
             postDelayed(sweepRunnable, pollInterval) // delay before next sweep
         }
@@ -627,7 +637,7 @@ class JayGauge @JvmOverloads constructor(
             sweepAnimator = ValueAnimator.ofFloat(currentValue, nextValue).apply {
                 duration = nextDuration
                 interpolator = sweepInterpolator
-                addUpdateListener (sweepAnimatorUpdateListener)
+                addUpdateListener(sweepAnimatorUpdateListener)
                 doOnEnd(onEnd)
                 start()
             }
@@ -635,14 +645,13 @@ class JayGauge @JvmOverloads constructor(
     }
 
 
-    data class Arc(val rect: RectF)
-    data class MainArc(val bgArc: Arc, val glowArc: Arc, val progArc: Arc)
+    private data class Arc(val rect: RectF)
+    private data class MainArc(val bgArc: Arc, val glowArc: Arc, val progArc: Arc)
 
     private var mainArc: MainArc? = null
     private fun drawArc(
         canvas: Canvas, centerX: Float, centerY: Float, radius: Float
     ) {
-        if(minValue == -1f && maxValue==-1f){return}
         if (mainArc != null) {
             mainArc?.bgArc?.let { arc ->
                 // 1️⃣ Draw background arc (full sweep)
@@ -762,6 +771,7 @@ class JayGauge @JvmOverloads constructor(
 
     private var gaugeUnitAndValue: GaugeReading? = null
     private var onPrepareGaugeValueColorSet: Boolean = false
+
     private fun drawGaugeUnitAndValue(
         canvas: Canvas, centerX: Float, centerY: Float, radius: Float
     ) {
