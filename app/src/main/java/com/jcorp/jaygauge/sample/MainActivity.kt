@@ -46,8 +46,8 @@ class MainActivity : AppCompatActivity() {
             setTheme(GaugeTheme.DARK)
             setArcTheme(GaugeArcColorTheme.LavenderMist)
             setUnit(Units.TEMPERATURE_C)
-            setMinValue(20f)
-            setMaxValue(100f)
+            setMinProgress(20f)
+            setMaxProgress(100f)
             setNumOfTicks(9)
         }
         //gauge one has demo mode on
@@ -63,8 +63,8 @@ class MainActivity : AppCompatActivity() {
             override fun onGaugePrepared() {
                 //warm up animation ends now gauge is ready to use
                 //start setting Progress now
-                val min=binding.gaugeTwo.getMin()
-                val max=binding.gaugeTwo.getMax()
+                val min=binding.gaugeTwo.getMinProgress()
+                val max=binding.gaugeTwo.getMaxProgress()
                 viewModel.startCpuGauge(min,max)
 
 
@@ -79,8 +79,8 @@ class MainActivity : AppCompatActivity() {
             override fun onGaugePrepared() {
                 //warm up animation ends now gauge is ready to use
                 //start setting Progress now
-                val min=binding.gaugeThree.getMin()
-                val max=binding.gaugeThree.getMax()
+                val min=binding.gaugeThree.getMinProgress()
+                val max=binding.gaugeThree.getMaxProgress()
                 viewModel.startTempGauge(min,max)
             }
 

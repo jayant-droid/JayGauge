@@ -54,9 +54,9 @@ class JayGauge @JvmOverloads constructor(
 
     //class level private variables
     private var gaugeTheme: GaugeTheme = GaugeTheme.LIGHT
-    private var minValue = 0f
-    private var maxValue = 100f
-    private var currentValue: Float = minValue
+    private var minProgress = 0f
+    private var maxProgress = 100f
+    private var currentValue: Float = minProgress
     private var floatValueAnimator: ValueAnimator? = null
     private var intValueAnimator: ValueAnimator? = null
 
@@ -177,8 +177,8 @@ class JayGauge @JvmOverloads constructor(
     }
 
     private fun setUpProgress() {
-        val value = typedArray.getFloat(R.styleable.JayGauge_progress, minValue)
-        currentValue= value.coerceIn(minValue,maxValue)
+        val value = typedArray.getFloat(R.styleable.JayGauge_progress, minProgress)
+        currentValue= value.coerceIn(minProgress,maxProgress)
         invalidate()
     }
 
@@ -215,9 +215,56 @@ class JayGauge @JvmOverloads constructor(
     }
 
     private fun setUpMinMax() {
-        minValue = typedArray.getFloat(R.styleable.JayGauge_minProgress, 0f)
-        maxValue = typedArray.getFloat(R.styleable.JayGauge_maxProgress, 100f)
+        minProgress = typedArray.getFloat(R.styleable.JayGauge_minProgress, getDefaultMin())
+        maxProgress = typedArray.getFloat(R.styleable.JayGauge_maxProgress, getDefaultMax())
         invalidate()
+    }
+    private fun getDefaultMin():Float{
+        return 0f
+    }
+    private fun getDefaultMax():Float{
+        when(unit){
+            Units.TEMPERATURE_C ->{
+                return 100f
+            }
+            Units.TEMPERATURE_F ->{
+                return 212f
+            }
+            Units.GHZ -> {
+                return 5.4f
+            }
+            Units.MHZ -> {
+                return 2000f
+            }
+            Units.KPH -> {
+                return 200f
+            }
+            Units.KPH_KM_H -> {
+                return 200f
+            }
+            Units.MPH_MI_H -> {
+                return 200f
+            }
+            Units.MPH -> {
+                return 200f
+            }
+            Units.PERCENTAGE -> {
+                return 100f
+            }
+            Units.GB -> {
+                return 100f
+            }
+            Units.MB -> {
+                return 100f
+            }
+            Units.NONE -> {
+                return 100f
+            }
+
+            else ->{
+                return 100f
+            }
+        }
     }
 
     private fun setUpArcTheme() {
@@ -275,10 +322,10 @@ class JayGauge @JvmOverloads constructor(
     private fun setValue(targetValue: Float) {
         var isInit=false
         var progress=targetValue
-        if(targetValue < minValue){
-            progress=minValue
+        if(targetValue < minProgress){
+            progress=minProgress
         }
-        val clamped = progress.coerceIn(minValue, maxValue)
+        val clamped = progress.coerceIn(minProgress, maxProgress)
         // Cancel previous animator if running
         floatValueAnimator?.cancel()
 
@@ -291,8 +338,8 @@ class JayGauge @JvmOverloads constructor(
         floatValueAnimator?.duration = computeNeedleJumpDuration(
             currentValue = currentValue,
             clamped = clamped.toFloat(),
-            minValue = minValue,
-            maxValue = maxValue,
+            minValue = minProgress,
+            maxValue = maxProgress,
 
             pollingInterval = pollInterval
         )
@@ -311,10 +358,10 @@ class JayGauge @JvmOverloads constructor(
     private fun setValue(targetValue: Int) {
         var isInit=false
         var progress=targetValue
-        if(targetValue < minValue){
-            progress=minValue.toInt()
+        if(targetValue < minProgress){
+            progress=minProgress.toInt()
         }
-        val clamped = progress.coerceIn(minValue.toInt(), maxValue.toInt())
+        val clamped = progress.coerceIn(minProgress.toInt(), maxProgress.toInt())
 
         // Cancel previous animator if running
         intValueAnimator?.cancel()
@@ -328,8 +375,8 @@ class JayGauge @JvmOverloads constructor(
         intValueAnimator?.duration = computeNeedleJumpDuration(
             currentValue = currentValue,
             clamped = clamped.toFloat(),
-            minValue = minValue,
-            maxValue = maxValue,
+            minValue = minProgress,
+            maxValue = maxProgress,
             pollingInterval = pollInterval
         )
         if(isInit || intValueAnimator?.interpolator ==null) {
@@ -550,7 +597,7 @@ class JayGauge @JvmOverloads constructor(
         }
         tickTextPaint.textSize = (availableRadius * tickTextSizeFraction).coerceIn(42f,100f)
 
-        val interval = (maxValue - minValue) / (numOfLabels - 1)
+        val interval = (maxProgress - minProgress) / (numOfLabels - 1)
 
         // ✅ Dynamic label radius based on gauge radius:
         val labelRadius =
@@ -561,7 +608,7 @@ class JayGauge @JvmOverloads constructor(
             val angleDeg = startAngle + i * (sweepAngle / (numOfLabels - 1))
             val angleRad = Math.toRadians(angleDeg.toDouble())
 
-            val labelValue = minValue + i * interval
+            val labelValue = minProgress + i * interval
 
             val labelX = centerX + labelRadius * cos(angleRad).toFloat()
             val labelY =
@@ -624,7 +671,7 @@ class JayGauge @JvmOverloads constructor(
     private fun animateNextSweep() {
         if (!isSweeping) return
 
-        val nextValue = minValue + Random.nextFloat() * (maxValue - minValue)
+        val nextValue = minProgress + Random.nextFloat() * (maxProgress - minProgress)
         val nextDuration = (500..1200).random().toLong()
         if (sweepAnimator != null) {
             sweepAnimator?.cancel()
@@ -658,7 +705,7 @@ class JayGauge @JvmOverloads constructor(
                 canvas.drawArc(arc.rect, startAngle, sweepAngle, false, bgArcPaint)
             }
             // 2️⃣ Calculate current sweep angle for progress
-            val ratio = (currentValue - minValue) / (maxValue - minValue)
+            val ratio = (currentValue - minProgress) / (maxProgress - minProgress)
             val progressSweep = (sweepAngle * ratio)
             mainArc?.glowArc?.let { arc ->
                 // First: wider, softer glow arc
@@ -678,8 +725,8 @@ class JayGauge @JvmOverloads constructor(
         canvas.drawArc(rect, startAngle, sweepAngle, false, bgArcPaint)
 
         // 2️⃣ Calculate current sweep angle for progress
-        val safeCurrent = currentValue.coerceIn(minValue, maxValue)
-        val ratio = (safeCurrent - minValue) / (maxValue - minValue)
+        val safeCurrent = currentValue.coerceIn(minProgress, maxProgress)
+        val ratio = (safeCurrent - minProgress) / (maxProgress - minProgress)
         val progressSweep = sweepAngle * ratio
 
         // 3️⃣ Create sweep gradient for progress arc
@@ -740,7 +787,7 @@ class JayGauge @JvmOverloads constructor(
         val scaledNeedleBitmap = getOrCreateScaledNeedleBitmap(radius)
 
         // Calculate the needle angle
-        val ratio = (currentValue - minValue) / (maxValue - minValue)
+        val ratio = (currentValue - minProgress) / (maxProgress - minProgress)
         val needleAngle = startAngle + ratio * sweepAngle - 140
 
         // Draw rotated needle image with center pivot
@@ -902,9 +949,9 @@ class JayGauge @JvmOverloads constructor(
         val isCustomUnit = customUnit != null
 
         val pattern = if (isCustomUnit) {
-            if(minValue !=0f){minValue.toString()}else{"000"}
+            if(minProgress !=0f){minProgress.toString()}else{"000"}
         } else {
-            if(minValue !=0f){minValue.toString()}else{unit.valuePattern}
+            if(minProgress !=0f){minProgress.toString()}else{unit.valuePattern}
         }
 
         return when {
@@ -1001,7 +1048,7 @@ class JayGauge @JvmOverloads constructor(
 
         // Forward sweep: 0 -> max
         if(fwdSweepAnimator == null) {
-            fwdSweepAnimator = ValueAnimator.ofFloat(minValue, maxValue).apply {
+            fwdSweepAnimator = ValueAnimator.ofFloat(minProgress, maxProgress).apply {
                 duration = sweepDuration
                 interpolator = fwdReverseInterpolator
                 addUpdateListener(fwdReverseAnimUpdateListener)
@@ -1011,7 +1058,7 @@ class JayGauge @JvmOverloads constructor(
 
         // Reverse sweep: max -> 0
         if(reverseSweepAnimator==null) {
-            reverseSweepAnimator = ValueAnimator.ofFloat(maxValue, minValue).apply {
+            reverseSweepAnimator = ValueAnimator.ofFloat(maxProgress, minProgress).apply {
                 duration = sweepDuration
                 interpolator = AccelerateDecelerateInterpolator()
 
@@ -1052,7 +1099,7 @@ class JayGauge @JvmOverloads constructor(
                 isSweeping = false
                 sweepAnimator?.cancel()
                 removeCallbacks(sweepRunnable)
-                setProgress(minValue)
+                setProgress(minProgress)
                 invalidate()
             }
         }
@@ -1072,14 +1119,16 @@ class JayGauge @JvmOverloads constructor(
         }
     }
 
-    override fun setMinValue(min: Float) {
-        this.minValue = min
+    override fun setMinProgress(min: Float) {
+        this.minProgress = min
         currentValue=min
+        isTickLabelPrepared=false
         invalidate()
     }
 
-    override fun setMaxValue( max: Float) {
-        this.maxValue = max
+    override fun setMaxProgress(max: Float) {
+        this.maxProgress = max
+        isTickLabelPrepared=false
         invalidate()
     }
 
@@ -1110,7 +1159,7 @@ class JayGauge @JvmOverloads constructor(
         customUnit = cUnit
         invalidate()
     }
-    override fun getMin():Float=minValue
-    override fun getMax():Float=maxValue
+    override fun getMinProgress():Float=minProgress
+    override fun getMaxProgress():Float=maxProgress
 
 }
