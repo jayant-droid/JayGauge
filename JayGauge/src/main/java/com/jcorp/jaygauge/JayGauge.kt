@@ -1152,6 +1152,7 @@ class JayGauge @JvmOverloads constructor(
 
     override fun setNumOfTicks(numOfTicks: Int) {
         numOfLabels=numOfTicks
+        isTickLabelPrepared=false
         invalidate()
     }
 
