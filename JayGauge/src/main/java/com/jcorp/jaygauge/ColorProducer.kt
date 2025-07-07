@@ -6,7 +6,6 @@ import androidx.core.content.ContextCompat
 
 class ColorProducer(context: Context) {
     val grayTextColor by lazy { ContextCompat.getColor(context, R.color.gray_text) }
-    val blueThemeColor by lazy { ContextCompat.getColor(context, R.color.blue_theme) }
     val blackDefaultTextColor by lazy {
         ContextCompat.getColor(
             context,

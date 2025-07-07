@@ -36,7 +36,7 @@
             android:layout_height="220dp"
             app:minProgress="0"
             app:maxProgress="5.45"
-            app:gaugeTheme="blue"
+            app:gaugeTheme="light"
             app:numOfTicks="9"
             app:arcColorTheme="NeonParty"
             app:gaugeUnit="GHZ"

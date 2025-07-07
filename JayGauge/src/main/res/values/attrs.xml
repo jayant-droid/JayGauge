@@ -5,7 +5,6 @@
         <attr name="gaugeTheme" format="enum">
             <enum name="light" value="0"/>
             <enum name="dark" value="1"/>
-            <enum name="blue" value="2"/>
         </attr>
 
         <!--  set custom unit -->

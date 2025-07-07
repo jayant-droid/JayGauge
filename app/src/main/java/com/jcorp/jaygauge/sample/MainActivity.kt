@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun observeLiveData() {
         //gauge one has demo mode on, not data needed
-
+        //will show progress changes on it's own
         viewModel.clockSpeed.observe(this@MainActivity){
             binding.gaugeTwo.setProgress(it)
         }
@@ -41,17 +41,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun setGauges() {
         //can set from xml and code as well
-
         binding.gaugeThree.apply {
-            setTheme(GaugeTheme.DARK)
+            setTheme(GaugeTheme.LIGHT)
             setArcTheme(GaugeArcColorTheme.LavenderMist)
             setUnit(Units.TEMPERATURE_C)
             setMinProgress(20f)
             setMaxProgress(100f)
             setNumOfTicks(9)
         }
-        //gauge one has demo mode on
-        //will show progress changes automatically
+
 
         //set gaugeListener to listen for callbacks
         //wait till gauge has warmed up, then start setting progress
@@ -88,6 +86,7 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    //Spinner to showcase themes
     private fun setSpinner() {
         val spinner=binding.spinner
         val themes = GaugeArcColorTheme.entries.toTypedArray()

@@ -1,5 +1,5 @@
 package com.jcorp.jaygauge
 
 enum class GaugeTheme(val value:Int) {
-    LIGHT(0), DARK(1), BLUE(2)
+    LIGHT(0), DARK(1)
 }

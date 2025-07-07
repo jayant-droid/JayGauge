@@ -2,7 +2,6 @@
 <resources>
     <color name="black_default_text">#000000</color>
     <color name="gray_text">#807E7E</color>
-    <color name="blue_theme">#141526</color>
     <color name="light_black_text">#8A8787</color>
     <color name="semi_white">#2CFFFFFF</color>
     <color name="more_opaque_white">#8FFFFFFF</color>

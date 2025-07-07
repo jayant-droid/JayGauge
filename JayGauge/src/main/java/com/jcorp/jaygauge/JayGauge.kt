@@ -37,7 +37,6 @@ class JayGauge @JvmOverloads constructor(
     //Colors
     private val blackDefaultTextColor: Int by lazy { ResourceProvider.getColors().blackDefaultTextColor }
     private val grayTextColor by lazy { ResourceProvider.getColors().grayTextColor }
-    private val blueThemeColor by lazy { ResourceProvider.getColors().blueThemeColor }
     private val lightBlackTextColor by lazy { ResourceProvider.getColors().lightBlackTextColor }
     private val moreOpaqueWhite by lazy { ResourceProvider.getColors().more_opaque_white }
 
@@ -283,7 +282,7 @@ class JayGauge @JvmOverloads constructor(
         when (gaugeTheme) {
             GaugeTheme.LIGHT -> {
                 // Light background
-                setBackgroundColor(Color.WHITE)
+                setBackgroundColor(Color.TRANSPARENT)
                 // Text
                 valueTextPaint.color = blackDefaultTextColor
                 unitTextPaint.color = blackDefaultTextColor
@@ -294,16 +293,7 @@ class JayGauge @JvmOverloads constructor(
             }
 
             GaugeTheme.DARK -> {
-                setBackgroundColor(Color.BLACK)
-                valueTextPaint.color = Color.WHITE
-                unitTextPaint.color = Color.WHITE
-                tickTextPaint.color = Color.LTGRAY
-
-                bgArcPaint.color = Color.DKGRAY
-            }
-
-            GaugeTheme.BLUE -> {
-                setBackgroundColor(blueThemeColor)
+                setBackgroundColor(Color.TRANSPARENT)
                 valueTextPaint.color = Color.WHITE
                 unitTextPaint.color = Color.WHITE
                 tickTextPaint.color = Color.LTGRAY
@@ -644,7 +634,7 @@ class JayGauge @JvmOverloads constructor(
 
     private fun getTextColor(): Int = when (gaugeTheme) {
         GaugeTheme.LIGHT -> Color.BLACK
-        GaugeTheme.DARK, GaugeTheme.BLUE -> Color.WHITE
+        GaugeTheme.DARK  -> Color.WHITE
         // Add a default case or handle other themes if necessary
         // For now, defaulting to black for unhandled themes
     }
