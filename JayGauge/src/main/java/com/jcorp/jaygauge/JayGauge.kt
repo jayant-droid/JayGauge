@@ -34,6 +34,14 @@ class JayGauge @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
 ) : View(context, attrs), JayGaugeController {
 
+    // Configurable
+    private var minProgress = 0f
+    private var maxProgress = 100f
+
+    private val startAngle = 140f
+    private val sweepAngle = 260f
+
+
     //Colors
     private val blackDefaultTextColor: Int by lazy { ResourceProvider.getColors().blackDefaultTextColor }
     private val grayTextColor by lazy { ResourceProvider.getColors().grayTextColor }
@@ -43,7 +51,6 @@ class JayGauge @JvmOverloads constructor(
     //fonts
     private val uniformCondensed: Typeface? by lazy { ResourceProvider.getFonts().uniformCondensed }
     private val uniformExtraCondensedMedium: Typeface? by lazy { ResourceProvider.getFonts().uniformExtraCondensedMedium }
-    private val uniformExtraCondensed: Typeface? by lazy { ResourceProvider.getFonts().uniformExtraCondensed }
     private val uniformCondensedMedium: Typeface? by lazy { ResourceProvider.getFonts().uniformCondensedMedium }
 
     //needle bitmap
@@ -53,8 +60,7 @@ class JayGauge @JvmOverloads constructor(
 
     //class level private variables
     private var gaugeTheme: GaugeTheme = GaugeTheme.LIGHT
-    private var minProgress = 0f
-    private var maxProgress = 100f
+
     private var currentValue: Float = minProgress
     private var floatValueAnimator: ValueAnimator? = null
     private var intValueAnimator: ValueAnimator? = null
@@ -126,12 +132,6 @@ class JayGauge @JvmOverloads constructor(
         }
     }
 
-
-
-    // You can adjust these:
-    private val startAngle by lazy { 140f }
-    private val sweepAngle by lazy { 260f }
-
     //attributes
     private val typedArray by lazy {
         context.theme.obtainStyledAttributes(
@@ -156,15 +156,110 @@ class JayGauge @JvmOverloads constructor(
     private var isPreparing = false
     private var isPrepared = false
 
+    //Caching runtime vars
+    private val valueInterpolator by lazy {
+        AccelerateDecelerateInterpolator()
+    }
+    //cache tick labels
+    private var isTickLabelPrepared = false
+    private val tickLabels = mutableListOf<TickLabel>()
+
+    //cache sweep gradient
+    var arcGradient:SweepGradient? =null
+
 
     //init block
     init {
+        setLayerType(LAYER_TYPE_HARDWARE, null)
         ResourceProvider.init(context)
         setupAttributes()
     }
 
     //xml attributes
     private fun setupAttributes() {
+        //inner methods
+
+        fun setUpProgress() {
+            val value = typedArray.getFloat(R.styleable.JayGauge_progress, minProgress)
+            currentValue = value.coerceIn(minProgress, maxProgress)
+        }
+
+        fun setUpNumOfTicks() {
+            numOfLabels =
+                typedArray.getInt(R.styleable.JayGauge_numOfTicks, numOfLabels)
+            isTickLabelPrepared = false
+        }
+
+        fun setUpDemoMode() {
+            val isOn = typedArray.getBoolean(R.styleable.JayGauge_demoMode, false)
+            if (isOn) {
+                if (isSweeping) return // already running
+                isSweeping = true
+                if (!isPreparing && isPrepared) {
+                    animateNextSweep()
+                }
+            } else {
+                currentValue = minProgress
+                if (isSweeping) {
+                    isSweeping = false
+                    sweepAnimator?.cancel()
+                    removeCallbacks(sweepRunnable)
+                }
+            }
+        }
+
+        fun setUpTheme() {
+            val gaugeThemeValue =
+                typedArray.getInt(R.styleable.JayGauge_gaugeTheme, GaugeTheme.LIGHT.value)
+            gaugeTheme =
+                GaugeTheme.entries.firstOrNull { it.value == gaugeThemeValue } ?: GaugeTheme.LIGHT
+            when (gaugeTheme) {
+                GaugeTheme.LIGHT -> {
+                    // Light background
+                    setBackgroundColor(Color.TRANSPARENT)
+                    // Text
+                    valueTextPaint.color = blackDefaultTextColor
+                    unitTextPaint.color = blackDefaultTextColor
+                    tickTextPaint.color = lightBlackTextColor
+
+                    // Arc
+                    bgArcPaint.color = Color.LTGRAY
+                }
+
+                GaugeTheme.DARK -> {
+                    setBackgroundColor(Color.TRANSPARENT)
+                    valueTextPaint.color = Color.WHITE
+                    unitTextPaint.color = Color.WHITE
+                    tickTextPaint.color = Color.LTGRAY
+                    bgArcPaint.color = Color.DKGRAY
+                }
+            }
+        }
+
+        fun setUpUnit() {
+            val customUnit = typedArray.getString(R.styleable.JayGauge_customUnit) ?: customUnit
+            if (customUnit != null) {
+                this.customUnit = customUnit
+
+                return
+            }
+            val gaugeUnitId = typedArray.getInt(R.styleable.JayGauge_gaugeUnit, Units.NONE.id)
+            this.unit = Units.entries.firstOrNull { it.id == gaugeUnitId } ?: Units.NONE
+        }
+
+        fun setUpMinMax() {
+            minProgress = typedArray.getFloat(R.styleable.JayGauge_minProgress, getDefaultMin())
+            maxProgress = typedArray.getFloat(R.styleable.JayGauge_maxProgress, getDefaultMax())
+        }
+
+        fun setUpArcTheme() {
+            val themeId =
+                typedArray.getInt(R.styleable.JayGauge_arcColorTheme, GaugeArcColorTheme.Default.id)
+            val arcTheme: GaugeArcColorTheme =
+                GaugeArcColorTheme.entries.firstOrNull { it.id == themeId }
+                    ?: GaugeArcColorTheme.Default
+            arcColors = arcTheme.colors
+        }
         //gauge Theme
         setUpTheme()
         setUpNumOfTicks()
@@ -173,157 +268,88 @@ class JayGauge @JvmOverloads constructor(
         setUpProgress()
         setUpArcTheme()
         setUpDemoMode()
-    }
-
-    private fun setUpProgress() {
-        val value = typedArray.getFloat(R.styleable.JayGauge_progress, minProgress)
-        currentValue= value.coerceIn(minProgress,maxProgress)
         invalidate()
     }
 
-    private fun setUpNumOfTicks() {
-        numOfLabels =
-            typedArray.getInt(R.styleable.JayGauge_numOfTicks, numOfLabels)
-        isTickLabelPrepared=false
-        invalidate()
-    }
 
-    private fun setUpDemoMode() {
-        val isOn = typedArray.getBoolean(R.styleable.JayGauge_demoMode, false)
-        isDemoMode(isOn)
-    }
-
-    private fun setUpTheme() {
-        val gaugeThemeValue =
-            typedArray.getInt(R.styleable.JayGauge_gaugeTheme, GaugeTheme.LIGHT.value)
-        gaugeTheme =
-            GaugeTheme.entries.firstOrNull { it.value == gaugeThemeValue } ?: GaugeTheme.LIGHT
-        setTheme(gaugeTheme)
-    }
-
-    private fun setUpUnit() {
-        val customUnit = typedArray.getString(R.styleable.JayGauge_customUnit) ?: customUnit
-        if (customUnit != null) {
-            this.customUnit = customUnit
-            invalidate()
-            return
-        }
-        val gaugeUnitId = typedArray.getInt(R.styleable.JayGauge_gaugeUnit, Units.NONE.id)
-        this.unit = Units.entries.firstOrNull { it.id == gaugeUnitId } ?: Units.NONE
-        invalidate()
-    }
-
-    private fun setUpMinMax() {
-        minProgress = typedArray.getFloat(R.styleable.JayGauge_minProgress, getDefaultMin())
-        maxProgress = typedArray.getFloat(R.styleable.JayGauge_maxProgress, getDefaultMax())
-        invalidate()
-    }
-    private fun getDefaultMin():Float{
+    private fun getDefaultMin(): Float {
         return 0f
     }
-    private fun getDefaultMax():Float{
-        when(unit){
-            Units.TEMPERATURE_C ->{
+
+    private fun getDefaultMax(): Float {
+        when (unit) {
+            Units.TEMPERATURE_C -> {
                 return 100f
             }
-            Units.TEMPERATURE_F ->{
+
+            Units.TEMPERATURE_F -> {
                 return 212f
             }
+
             Units.GHZ -> {
                 return 5.4f
             }
+
             Units.MHZ -> {
                 return 2000f
             }
+
             Units.KPH -> {
                 return 200f
             }
+
             Units.KPH_KM_H -> {
                 return 200f
             }
+
             Units.MPH_MI_H -> {
                 return 200f
             }
+
             Units.MPH -> {
                 return 200f
             }
+
             Units.PERCENTAGE -> {
                 return 100f
             }
+
             Units.GB -> {
                 return 100f
             }
+
             Units.MB -> {
                 return 100f
             }
+
             Units.NONE -> {
                 return 100f
             }
 
-            else ->{
+            else -> {
                 return 100f
             }
         }
     }
 
-    private fun setUpArcTheme() {
-        val themeId =
-            typedArray.getInt(R.styleable.JayGauge_arcColorTheme, GaugeArcColorTheme.Default.id)
-        val arcTheme: GaugeArcColorTheme =
-            GaugeArcColorTheme.entries.firstOrNull { it.id == themeId }
-                ?: GaugeArcColorTheme.Default
-        arcColors = arcTheme.colors
-        invalidate()
-    }
 
-
-    //internal functions
-    private fun applyTheme() {
-        when (gaugeTheme) {
-            GaugeTheme.LIGHT -> {
-                // Light background
-                setBackgroundColor(Color.TRANSPARENT)
-                // Text
-                valueTextPaint.color = blackDefaultTextColor
-                unitTextPaint.color = blackDefaultTextColor
-                tickTextPaint.color = lightBlackTextColor
-
-                // Arc
-                bgArcPaint.color = Color.LTGRAY
-            }
-
-            GaugeTheme.DARK -> {
-                setBackgroundColor(Color.TRANSPARENT)
-                valueTextPaint.color = Color.WHITE
-                unitTextPaint.color = Color.WHITE
-                tickTextPaint.color = Color.LTGRAY
-                bgArcPaint.color = Color.DKGRAY
-            }
-        }
-
-        invalidate() // Force redraw
-    }
-
-    private val valueInterpolator by lazy {
-        AccelerateDecelerateInterpolator()
-    }
 
 
     private fun setValue(targetValue: Float) {
-        var isInit=false
-        var progress=targetValue
-        if(targetValue < minProgress){
-            progress=minProgress
+        var isInit = false
+        var progress = targetValue
+        if (targetValue < minProgress) {
+            progress = minProgress
         }
         val clamped = progress.coerceIn(minProgress, maxProgress)
         // Cancel previous animator if running
         floatValueAnimator?.cancel()
 
-        if(floatValueAnimator == null){
-            isInit=true
+        if (floatValueAnimator == null) {
+            isInit = true
             floatValueAnimator = ValueAnimator.ofFloat(currentValue, clamped)
-        }else{
-            floatValueAnimator?.setFloatValues(currentValue,clamped)
+        } else {
+            floatValueAnimator?.setFloatValues(currentValue, clamped)
         }
         floatValueAnimator?.duration = computeNeedleJumpDuration(
             currentValue = currentValue,
@@ -333,34 +359,35 @@ class JayGauge @JvmOverloads constructor(
 
             pollingInterval = pollInterval
         )
-        if(isInit || floatValueAnimator?.interpolator ==null) {
+        if (isInit || floatValueAnimator?.interpolator == null) {
             floatValueAnimator?.interpolator = valueInterpolator
         }
-        if(isInit) {
+        if (isInit) {
             floatValueAnimator?.addUpdateListener {
                 currentValue = getAnimValue(it.animatedValue)
-                invalidate()
+                //invalidate()
+                postInvalidateOnAnimation()
             }
         }
         floatValueAnimator?.start()
     }
 
     private fun setValue(targetValue: Int) {
-        var isInit=false
-        var progress=targetValue
-        if(targetValue < minProgress){
-            progress=minProgress.toInt()
+        var isInit = false
+        var progress = targetValue
+        if (targetValue < minProgress) {
+            progress = minProgress.toInt()
         }
         val clamped = progress.coerceIn(minProgress.toInt(), maxProgress.toInt())
 
         // Cancel previous animator if running
         intValueAnimator?.cancel()
 
-        if(intValueAnimator == null){
-            isInit=true
+        if (intValueAnimator == null) {
+            isInit = true
             intValueAnimator = ValueAnimator.ofInt(currentValue.toInt(), clamped)
-        }else{
-            intValueAnimator?.setIntValues(currentValue.toInt(),clamped)
+        } else {
+            intValueAnimator?.setIntValues(currentValue.toInt(), clamped)
         }
         intValueAnimator?.duration = computeNeedleJumpDuration(
             currentValue = currentValue,
@@ -369,13 +396,14 @@ class JayGauge @JvmOverloads constructor(
             maxValue = maxProgress,
             pollingInterval = pollInterval
         )
-        if(isInit || intValueAnimator?.interpolator ==null) {
+        if (isInit || intValueAnimator?.interpolator == null) {
             intValueAnimator?.interpolator = valueInterpolator
         }
-        if(isInit) {
+        if (isInit) {
             intValueAnimator?.addUpdateListener {
                 currentValue = getAnimValue(it.animatedValue)
-                invalidate()
+//                invalidate()
+                postInvalidateOnAnimation()
             }
         }
         intValueAnimator?.start()
@@ -408,7 +436,6 @@ class JayGauge @JvmOverloads constructor(
         //need to call these once only
         if (arcRadius == 0f) {
             setMainArcRadius()
-            setLayerType(LAYER_TYPE_SOFTWARE, null)
             // ✅ Dynamically update stroke widths!
             updateDynamicStrokeWidths(arcRadius)
         }
@@ -496,14 +523,13 @@ class JayGauge @JvmOverloads constructor(
         val labelValue: Float
     )
 
-    private var isTickLabelPrepared = false
-    private val tickLabels = mutableListOf<TickLabel>()
+
 
     //private val labelHighlightOffset = (maxValue - minValue) * 0.02f
     //this makes highlight to appear before arc reaches it.
     // for error correction, not needed with curr logic
     private val labelHighlightOffset = 0f
-        val defaultNumOfLabels=9
+    val defaultNumOfLabels = 9
     private fun drawTickLabels(
         canvas: Canvas, centerX: Float, centerY: Float, radius: Float
     ) {
@@ -524,19 +550,17 @@ class JayGauge @JvmOverloads constructor(
         tickLabels.clear()
         val gaugePaddingFraction = 0.05f // tweak if you want margin at edges
         val availableRadius = radius * (1f - gaugePaddingFraction)
-        var percentageDelta=0f
-        var inCreaseTextSize=false
-        if(defaultNumOfLabels != numOfLabels){
-            val labelSizeDiff=if(numOfLabels > defaultNumOfLabels){
+        var percentageDelta = 0f
+        var inCreaseTextSize = false
+        if (defaultNumOfLabels != numOfLabels) {
+            val labelSizeDiff = if (numOfLabels > defaultNumOfLabels) {
                 inCreaseTextSize = false
-                numOfLabels-defaultNumOfLabels
-            }else {
+                numOfLabels - defaultNumOfLabels
+            } else {
                 inCreaseTextSize = true
-                defaultNumOfLabels-numOfLabels
+                defaultNumOfLabels - numOfLabels
             }
-            percentageDelta=(labelSizeDiff.toFloat()/defaultNumOfLabels)*100
-            percentageDelta=percentageDelta
-
+            percentageDelta = (labelSizeDiff.toFloat() / defaultNumOfLabels) * 100
         }
 
         var tickTextSizeFraction = when (unit) {
@@ -556,11 +580,11 @@ class JayGauge @JvmOverloads constructor(
                 0.22f
             }
         }
-        if(percentageDelta > 0f) {
-            val changeInTextSize=(((tickTextSizeFraction * (percentageDelta/1.8f)) / 100))
-            tickTextSizeFraction = if(inCreaseTextSize) {
+        if (percentageDelta > 0f) {
+            val changeInTextSize = (((tickTextSizeFraction * (percentageDelta / 1.8f)) / 100))
+            tickTextSizeFraction = if (inCreaseTextSize) {
                 tickTextSizeFraction + changeInTextSize
-            }else{
+            } else {
                 tickTextSizeFraction - changeInTextSize
             }
         }
@@ -577,21 +601,21 @@ class JayGauge @JvmOverloads constructor(
                 0.73f
             }
         }
-        if(percentageDelta > 0f) {
-            val changeInLabelRadius=(((labelRadiusFraction * (percentageDelta/10)) / 100))
-            labelRadiusFraction = if(inCreaseTextSize) {
+        if (percentageDelta > 0f) {
+            val changeInLabelRadius = (((labelRadiusFraction * (percentageDelta / 10)) / 100))
+            labelRadiusFraction = if (inCreaseTextSize) {
                 labelRadiusFraction - changeInLabelRadius
-            }else{
+            } else {
                 labelRadiusFraction + changeInLabelRadius
             }
         }
-        tickTextPaint.textSize = (availableRadius * tickTextSizeFraction).coerceIn(42f,100f)
+        tickTextPaint.textSize = (availableRadius * tickTextSizeFraction).coerceIn(42f, 100f)
 
         val interval = (maxProgress - minProgress) / (numOfLabels - 1)
 
         // ✅ Dynamic label radius based on gauge radius:
         val labelRadius =
-            (radius * labelRadiusFraction).coerceAtMost(radius-(progressArcPaint.strokeWidth * 0.90f)) // tweak 0.8 ~ 0.85 for style this affects spacing between
+            (radius * labelRadiusFraction).coerceAtMost(radius - (progressArcPaint.strokeWidth * 0.90f)) // tweak 0.8 ~ 0.85 for style this affects spacing between
         // gauge arc and text labels
 
         for (i in 0 until numOfLabels) {
@@ -634,7 +658,7 @@ class JayGauge @JvmOverloads constructor(
 
     private fun getTextColor(): Int = when (gaugeTheme) {
         GaugeTheme.LIGHT -> Color.BLACK
-        GaugeTheme.DARK  -> Color.WHITE
+        GaugeTheme.DARK -> Color.WHITE
         // Add a default case or handle other themes if necessary
         // For now, defaulting to black for unhandled themes
     }
@@ -643,10 +667,11 @@ class JayGauge @JvmOverloads constructor(
     private val sweepAnimatorUpdateListener: ValueAnimator.AnimatorUpdateListener by lazy {
         ValueAnimator.AnimatorUpdateListener { animation ->
             currentValue = getAnimValue(animation.animatedValue)
-            invalidate()
+            //invalidate()
+            postInvalidateOnAnimation()
         }
     }
-    private val sweepInterpolator by lazy{ AccelerateDecelerateInterpolator() }
+    private val sweepInterpolator by lazy { AccelerateDecelerateInterpolator() }
     private val sweepRunnable: Runnable by lazy {
         Runnable {
             animateNextSweep()
@@ -658,6 +683,7 @@ class JayGauge @JvmOverloads constructor(
             postDelayed(sweepRunnable, pollInterval) // delay before next sweep
         }
     }
+
     private fun animateNextSweep() {
         if (!isSweeping) return
 
@@ -686,6 +712,9 @@ class JayGauge @JvmOverloads constructor(
     private data class MainArc(val bgArc: Arc, val glowArc: Arc, val progArc: Arc)
 
     private var mainArc: MainArc? = null
+
+    var arcMatrix : Matrix?=null
+
     private fun drawArc(
         canvas: Canvas, centerX: Float, centerY: Float, radius: Float
     ) {
@@ -719,15 +748,17 @@ class JayGauge @JvmOverloads constructor(
         val ratio = (safeCurrent - minProgress) / (maxProgress - minProgress)
         val progressSweep = sweepAngle * ratio
 
-        // 3️⃣ Create sweep gradient for progress arc
-        val arcGradient = SweepGradient(
-            centerX, centerY, arcColors, arcColorPositions
-        )
-
         // Rotate gradient so it aligns with startAngle
-        val matrix = Matrix()
-        matrix.postRotate(startAngle - 70, centerX, centerY)
-        arcGradient.setLocalMatrix(matrix)
+        if(arcMatrix == null){
+            arcMatrix= Matrix()
+        }
+        arcMatrix?.postRotate(startAngle - 70, centerX, centerY)
+        if(arcGradient == null){
+            arcGradient = SweepGradient(
+                centerX, centerY, arcColors, arcColorPositions
+            )
+        }
+        arcGradient?.setLocalMatrix(arcMatrix)
 
         // Rotate matrix as you do for progressArcPaint
         glowArcPaint.shader = arcGradient
@@ -939,9 +970,17 @@ class JayGauge @JvmOverloads constructor(
         val isCustomUnit = customUnit != null
 
         val pattern = if (isCustomUnit) {
-            if(minProgress !=0f){minProgress.toString()}else{"000"}
+            if (minProgress != 0f) {
+                minProgress.toString()
+            } else {
+                "000"
+            }
         } else {
-            if(minProgress !=0f){minProgress.toString()}else{unit.valuePattern}
+            if (minProgress != 0f) {
+                minProgress.toString()
+            } else {
+                unit.valuePattern
+            }
         }
 
         return when {
@@ -984,6 +1023,7 @@ class JayGauge @JvmOverloads constructor(
         fun onGaugePreparing()
         fun onGaugePrepared()
     }
+
     private val sweepDuration: Long = 1000L
     private val pauseAfterSweep: Long = 1000L
     private val startDelay: Long = 1000L
@@ -995,7 +1035,8 @@ class JayGauge @JvmOverloads constructor(
 
                 // ✅ Add a short pause before signaling "ready"
                 postDelayed({
-                    invalidate()
+                    //invalidate()
+                    postInvalidateOnAnimation()
                     gaugeListener?.onGaugePrepared()
                     if (isSweeping) {
                         animateNextSweep() //start demo Mode
@@ -1004,7 +1045,7 @@ class JayGauge @JvmOverloads constructor(
             }
         }
     }
-    private val fwdSweepListener by lazy{
+    private val fwdSweepListener by lazy {
         object : AnimatorListenerAdapter() {
             override fun onAnimationStart(animation: Animator) {
                 if (!isPreparing) {
@@ -1018,26 +1059,28 @@ class JayGauge @JvmOverloads constructor(
         object : ValueAnimator.AnimatorUpdateListener {
             override fun onAnimationUpdate(animation: ValueAnimator) {
                 currentValue = getAnimValue(animation.animatedValue)
-                invalidate()
+                //invalidate()
+                postInvalidateOnAnimation()
             }
         }
     }
-    private val fwdReverseInterpolator by lazy{AccelerateDecelerateInterpolator()}
+    private val fwdReverseInterpolator by lazy { AccelerateDecelerateInterpolator() }
     var fwdSweepAnimator: ValueAnimator? = null
-    var reverseSweepAnimator: ValueAnimator?=null
-    private val reverseRunnable:Runnable by lazy {
-        Runnable{
+    var reverseSweepAnimator: ValueAnimator? = null
+    private val reverseRunnable: Runnable by lazy {
+        Runnable {
             prepareAnimator = fwdSweepAnimator
             fwdSweepAnimator?.start()
         }
     }
+
     private fun prepareGaugeSweep(
     ) {
         isPrepared = false
         prepareAnimator?.cancel()
 
         // Forward sweep: 0 -> max
-        if(fwdSweepAnimator == null) {
+        if (fwdSweepAnimator == null) {
             fwdSweepAnimator = ValueAnimator.ofFloat(minProgress, maxProgress).apply {
                 duration = sweepDuration
                 interpolator = fwdReverseInterpolator
@@ -1047,13 +1090,11 @@ class JayGauge @JvmOverloads constructor(
         }
 
         // Reverse sweep: max -> 0
-        if(reverseSweepAnimator==null) {
+        if (reverseSweepAnimator == null) {
             reverseSweepAnimator = ValueAnimator.ofFloat(maxProgress, minProgress).apply {
                 duration = sweepDuration
                 interpolator = AccelerateDecelerateInterpolator()
-
                 addUpdateListener(fwdReverseAnimUpdateListener)
-
                 addListener(reverseSweepListener)
             }
 
@@ -1075,6 +1116,20 @@ class JayGauge @JvmOverloads constructor(
         }
     }
 
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        prepareAnimator?.cancel()
+        fwdSweepAnimator?.cancel()
+        reverseSweepAnimator?.cancel()
+        intValueAnimator?.cancel()
+        floatValueAnimator?.cancel()
+        intValueAnimator = null
+        floatValueAnimator = null
+        prepareAnimator = null
+        fwdSweepAnimator = null
+        reverseSweepAnimator = null
+    }
+
     //exposed functions to control JayGauge
 
     override fun isDemoMode(isOn: Boolean) {
@@ -1085,19 +1140,42 @@ class JayGauge @JvmOverloads constructor(
                 animateNextSweep()
             }
         } else {
-            if(isSweeping) {
+            if (isSweeping) {
                 isSweeping = false
                 sweepAnimator?.cancel()
                 removeCallbacks(sweepRunnable)
                 setProgress(minProgress)
-                invalidate()
+                //invalidate()
+                postInvalidateOnAnimation()
             }
         }
     }
 
     override fun setTheme(theme: GaugeTheme) {
         this.gaugeTheme = theme
-        applyTheme()
+        when (gaugeTheme) {
+            GaugeTheme.LIGHT -> {
+                // Light background
+                setBackgroundColor(Color.TRANSPARENT)
+                // Text
+                valueTextPaint.color = blackDefaultTextColor
+                unitTextPaint.color = blackDefaultTextColor
+                tickTextPaint.color = lightBlackTextColor
+
+                // Arc
+                bgArcPaint.color = Color.LTGRAY
+            }
+
+            GaugeTheme.DARK -> {
+                setBackgroundColor(Color.TRANSPARENT)
+                valueTextPaint.color = Color.WHITE
+                unitTextPaint.color = Color.WHITE
+                tickTextPaint.color = Color.LTGRAY
+                bgArcPaint.color = Color.DKGRAY
+            }
+        }
+
+        invalidate() // Force redraw
     }
 
     override fun setProgress(progress: Float) {
@@ -1111,17 +1189,16 @@ class JayGauge @JvmOverloads constructor(
 
     override fun setMinProgress(min: Float) {
         this.minProgress = min
-        currentValue=min
-        isTickLabelPrepared=false
+        currentValue = min
+        isTickLabelPrepared = false
         invalidate()
     }
 
     override fun setMaxProgress(max: Float) {
         this.maxProgress = max
-        isTickLabelPrepared=false
+        isTickLabelPrepared = false
         invalidate()
     }
-
 
 
     override fun setUnit(unit: Units) {
@@ -1132,6 +1209,8 @@ class JayGauge @JvmOverloads constructor(
 
     override fun setArcTheme(theme: GaugeArcColorTheme) {
         mainArc = null //re-draw main arc
+        arcGradient=null
+        arcMatrix = null
         arcColors = theme.colors
         invalidate()
     }
@@ -1141,8 +1220,8 @@ class JayGauge @JvmOverloads constructor(
     }
 
     override fun setNumOfTicks(numOfTicks: Int) {
-        numOfLabels=numOfTicks
-        isTickLabelPrepared=false
+        numOfLabels = numOfTicks
+        isTickLabelPrepared = false
         invalidate()
     }
 
@@ -1150,7 +1229,8 @@ class JayGauge @JvmOverloads constructor(
         customUnit = cUnit
         invalidate()
     }
-    override fun getMinProgress():Float=minProgress
-    override fun getMaxProgress():Float=maxProgress
+
+    override fun getMinProgress(): Float = minProgress
+    override fun getMaxProgress(): Float = maxProgress
 
 }
