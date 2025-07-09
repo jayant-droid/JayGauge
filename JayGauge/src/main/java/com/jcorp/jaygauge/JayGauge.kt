@@ -261,14 +261,18 @@ class JayGauge @JvmOverloads constructor(
             arcColors = arcTheme.colors
         }
         //gauge Theme
-        setUpTheme()
-        setUpNumOfTicks()
-        setUpUnit()
-        setUpMinMax()
-        setUpProgress()
-        setUpArcTheme()
-        setUpDemoMode()
-        invalidate()
+        try {
+            setUpTheme()
+            setUpNumOfTicks()
+            setUpUnit()
+            setUpMinMax()
+            setUpProgress()
+            setUpArcTheme()
+            setUpDemoMode()
+            invalidate()
+        }finally {
+            typedArray.recycle()
+        }
     }
 
 
