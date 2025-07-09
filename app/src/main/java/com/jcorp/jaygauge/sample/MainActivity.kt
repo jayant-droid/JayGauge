@@ -2,6 +2,7 @@ package com.jcorp.jaygauge.sample
 
 import android.os.Bundle
 import android.view.View
+import android.view.animation.AnimationUtils
 import android.widget.AdapterView
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -17,7 +18,9 @@ import kotlin.getValue
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val viewModel: MyVM by viewModels()
-
+    val fanRotateAnim by lazy {
+        AnimationUtils.loadAnimation(binding.root.context, R.anim.rotate_fan)
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -26,6 +29,25 @@ class MainActivity : AppCompatActivity() {
         setSpinner()
         setGauges()
         observeLiveData()
+        initFansLayerTwo()
+    }
+
+    private fun initFansLayerTwo() {
+        initFanAnim()
+    }
+    private fun initFanAnim() {
+        val fans = listOf(binding.loopFan1, binding.loopFan2, binding.loopFan3, binding.loopFan4)
+        fans.forEach { fan ->
+            if (fan.animation == null || !fan.animation.hasStarted()) {
+                fan.startAnimation(fanRotateAnim.apply { duration = 1700 })
+            }
+        }
+    }
+
+    fun stopFanAnim() {
+        if (fanRotateAnim.hasStarted()) {
+            fanRotateAnim.cancel()
+        }
     }
 
     private fun observeLiveData() {

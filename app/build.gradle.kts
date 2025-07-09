@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
+    implementation(libs.lottie)
     implementation(project(":JayGauge"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

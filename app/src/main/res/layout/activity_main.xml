@@ -16,55 +16,201 @@
 
 
         <com.jcorp.jaygauge.JayGauge
-            android:layout_width="300dp"
+            android:layout_width="250dp"
             android:id="@+id/gaugeOne"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="25dp"
             app:minProgress="0"
             app:maxProgress="220"
             app:demoMode="true"
+            android:layout_marginStart="10dp"
             app:gaugeTheme="light"
             app:numOfTicks="12"
             app:arcColorTheme="LavenderMist"
             app:gaugeUnit="KPH_KM_H"
-            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            android:layout_height="300dp"/>
+            android:layout_height="250dp"/>
+
         <com.jcorp.jaygauge.JayGauge
             android:id="@+id/gaugeTwo"
-            android:layout_width="220dp"
-            android:layout_height="220dp"
-            app:minProgress="0"
-            app:maxProgress="5.45"
-            app:gaugeTheme="light"
-            app:numOfTicks="9"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
             app:arcColorTheme="NeonParty"
+            app:gaugeTheme="light"
+            android:layout_marginTop="5dp"
+            app:layout_constraintBottom_toTopOf="@id/llFanLayer1"
             app:gaugeUnit="GHZ"
-            android:layout_marginTop="30dp"
-            app:layout_constraintEnd_toStartOf="@id/gaugeThree"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/spinner" />
+            app:layout_constraintTop_toBottomOf="@+id/spinner"
+            app:maxProgress="5.45"
+            app:minProgress="0"
+            app:numOfTicks="9" />
+
+        <com.jcorp.jaygauge.JayGauge
+            android:id="@+id/gaugeFive"
+            android:layout_width="200dp"
+            android:layout_height="200dp"
+            app:arcColorTheme="NeonParty"
+            app:demoMode="true"
+            app:gaugeTheme="light"
+            app:gaugeUnit="MHZ"
+
+            app:layout_constraintBottom_toBottomOf="@+id/gaugeTwo"
+            app:layout_constraintEnd_toEndOf="parent"
+
+            app:layout_constraintStart_toEndOf="@+id/gaugeTwo"
+            app:layout_constraintTop_toTopOf="@+id/gaugeTwo"
+            app:maxProgress="2100"
+            app:minProgress="0"
+            app:numOfTicks="8" />
         <androidx.appcompat.widget.AppCompatSpinner
-            android:layout_width="260dp"
+            android:layout_width="200dp"
             android:id="@+id/spinner"
             android:background="@drawable/gradient_placeholder"
             android:paddingVertical="5dp"
             android:paddingStart="10dp"
             app:layout_constraintBottom_toTopOf="@id/gaugeTwo"
             android:orientation="vertical"
-            android:layout_marginVertical="10dp"
             app:layout_constraintTop_toBottomOf="@id/gaugeOne"
             app:layout_constraintStart_toStartOf="@id/gaugeOne"
             app:layout_constraintEnd_toEndOf="@id/gaugeOne"
             android:layout_height="wrap_content"/>
 
-        <com.jcorp.jaygauge.JayGauge
-            android:id="@+id/gaugeThree"
-            android:layout_width="150dp"
-            android:layout_height="150dp"
-            app:layout_constraintBottom_toBottomOf="@+id/gaugeTwo"
+        <LinearLayout
+            android:id="@+id/llSmallGauges"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/gaugeTwo"
-            app:layout_constraintTop_toTopOf="@+id/gaugeTwo" />
+            app:layout_constraintStart_toEndOf="@+id/gaugeOne"
+            app:layout_constraintTop_toTopOf="@+id/gaugeOne">
+
+            <com.jcorp.jaygauge.JayGauge
+                android:id="@+id/gaugeThree"
+                android:layout_width="150dp"
+                android:layout_height="150dp" />
+
+            <com.jcorp.jaygauge.JayGauge
+                android:id="@+id/gaugeFour"
+                android:layout_width="150dp"
+                app:demoMode="true"
+                app:gaugeUnit="CELSIUS"
+                app:gaugeTheme="light"
+                app:numOfTicks="11"
+                app:arcColorTheme="Default"
+                app:minProgress="0"
+                app:maxProgress="100"
+                android:layout_height="150dp" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:gravity="center"
+            android:layout_marginTop="10dp"
+            android:id="@+id/llFanLayer1"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/gaugeTwo"
+            android:layout_height="wrap_content">
+
+            <com.airbnb.lottie.LottieAnimationView
+                android:id="@+id/fanAminVIew1"
+                android:layout_width="93dp"
+                android:layout_height="93dp"
+                android:scaleX="1.4"
+                android:scaleY="1.4"
+                android:paddingStart="5dp"
+                app:lottie_autoPlay="true"
+                app:lottie_loop="true"
+                app:lottie_speed="1.5"
+                app:lottie_rawRes="@raw/fan_orange"
+                app:lottie_renderMode="hardware" />
+
+            <com.airbnb.lottie.LottieAnimationView
+                android:id="@+id/fanAminVIew2"
+                android:layout_width="93dp"
+
+                android:layout_height="93dp"
+                android:scaleX="1.4"
+                android:scaleY="1.4"
+                android:paddingStart="5dp"
+                app:lottie_autoPlay="true"
+                app:lottie_loop="true"
+                app:lottie_speed="1.5"
+                app:lottie_rawRes="@raw/fan_orange"
+                app:lottie_renderMode="hardware" />
+
+            <com.airbnb.lottie.LottieAnimationView
+                android:id="@+id/fanAminVIew3"
+                android:layout_width="93dp"
+
+                android:layout_height="93dp"
+                android:scaleX="1.4"
+                android:scaleY="1.4"
+                android:paddingStart="5dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:lottie_autoPlay="true"
+                app:lottie_loop="true"
+                app:lottie_speed="1.5"
+                app:lottie_rawRes="@raw/fan_orange"
+                app:lottie_renderMode="hardware" />
+
+            <com.airbnb.lottie.LottieAnimationView
+                android:id="@+id/fanAminVIew4"
+                android:layout_width="93dp"
+                android:layout_height="93dp"
+                android:scaleX="1.4"
+                android:scaleY="1.4"
+                android:paddingStart="5dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:lottie_autoPlay="true"
+                app:lottie_loop="true"
+                app:lottie_speed="1.5"
+                app:lottie_rawRes="@raw/fan_orange"
+                app:lottie_renderMode="hardware" />
+
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:gravity="center"
+            android:layout_marginTop="5dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/llFanLayer1"
+            android:layout_height="wrap_content">
+            <ImageView
+                android:id="@+id/loopFan1"
+                android:layout_width="93dp"
+                android:layout_height="93dp"
+                android:paddingStart="5dp"
+                android:scaleType="fitCenter"
+                android:src="@mipmap/ic_fan_blade_1"
+                app:tint="@color/gray_text" />
+            <ImageView
+                android:id="@+id/loopFan2"
+                android:layout_width="93dp"
+                android:layout_height="93dp"
+                android:paddingStart="5dp"
+                android:scaleType="fitCenter"
+                android:src="@mipmap/ic_fan_blade_1"
+                app:tint="@color/gray_text" />
+            <ImageView
+                android:id="@+id/loopFan3"
+                android:layout_width="93dp"
+                android:layout_height="93dp"
+                android:paddingStart="5dp"
+                android:scaleType="fitCenter"
+                android:src="@mipmap/ic_fan_blade_1"
+                app:tint="@color/gray_text" />
+            <ImageView
+                android:id="@+id/loopFan4"
+                android:layout_width="93dp"
+                android:layout_height="93dp"
+                android:paddingStart="5dp"
+                android:scaleType="fitCenter"
+                android:src="@mipmap/ic_fan_blade_1"
+                app:tint="@color/gray_text" />
+        </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>
