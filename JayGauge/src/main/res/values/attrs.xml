@@ -70,6 +70,7 @@
         <attr name="maxProgress" format="float"/>
         <attr name="progress" format="float"/>
         <attr name="numOfTicks" format="integer"/>
+        <attr name="ticksMultiplier" format="integer"/>
 
 
     </declare-styleable>

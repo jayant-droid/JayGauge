@@ -70,6 +70,8 @@ class JayGauge @JvmOverloads constructor(
 
     private var numOfLabels = 9
 
+    private var ticksMultipler= 1
+
 
     //paint objects
     private val bgArcPaint by lazy {
@@ -126,6 +128,15 @@ class JayGauge @JvmOverloads constructor(
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = lightBlackTextColor
             textSize = 64f
+            typeface = uniformCondensedMedium
+            textAlign = Paint.Align.CENTER
+
+        }
+    }
+    private val tickMultiplierTextPaint by lazy {
+        Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = lightBlackTextColor
+            textSize = 24f
             typeface = uniformCondensedMedium
             textAlign = Paint.Align.CENTER
 
@@ -189,6 +200,9 @@ class JayGauge @JvmOverloads constructor(
                 typedArray.getInt(R.styleable.JayGauge_numOfTicks, numOfLabels)
             isTickLabelPrepared = false
         }
+        fun setTicksMultiplier(){
+            ticksMultipler = typedArray.getInt(R.styleable.JayGauge_ticksMultiplier, 1)
+        }
 
         fun setUpDemoMode() {
             val isOn = typedArray.getBoolean(R.styleable.JayGauge_demoMode, false)
@@ -221,6 +235,7 @@ class JayGauge @JvmOverloads constructor(
                     valueTextPaint.color = blackDefaultTextColor
                     unitTextPaint.color = blackDefaultTextColor
                     tickTextPaint.color = lightBlackTextColor
+                    tickMultiplierTextPaint.color = lightBlackTextColor
 
                     // Arc
                     bgArcPaint.color = Color.LTGRAY
@@ -232,6 +247,8 @@ class JayGauge @JvmOverloads constructor(
                     unitTextPaint.color = Color.WHITE
                     tickTextPaint.color = Color.LTGRAY
                     bgArcPaint.color = Color.DKGRAY
+                    tickMultiplierTextPaint.color = Color.LTGRAY
+
                 }
             }
         }
@@ -263,6 +280,7 @@ class JayGauge @JvmOverloads constructor(
         //gauge Theme
         try {
             setUpTheme()
+            setTicksMultiplier()
             setUpNumOfTicks()
             setUpUnit()
             setUpMinMax()
@@ -458,7 +476,10 @@ class JayGauge @JvmOverloads constructor(
 
         //center circle
         drawNeedleAnchor(canvas, centerX, centerY, arcRadius)
+
     }
+
+
 
     private fun setMainArcRadius() {
         centerX = width / 2f
@@ -470,7 +491,7 @@ class JayGauge @JvmOverloads constructor(
     private data class NeedleAnchor(
         val outerRadius: Float,
         val innerRadius: Float, val outX: Float, val outY: Float,
-        val inX: Float, val inY: Float
+        val inX: Float, val inY: Float, val tickMultTextOffSet: Float, val ticksMultiplerText: String?
     )
 
     private var needleAnchor: NeedleAnchor? = null
@@ -495,7 +516,6 @@ class JayGauge @JvmOverloads constructor(
             color = anchorInnerColor
         }
     }
-
     private fun drawNeedleAnchor(
         canvas: Canvas, centerX: Float, centerY: Float, radius: Float
     ) {
@@ -506,6 +526,11 @@ class JayGauge @JvmOverloads constructor(
 
                 // 2️⃣ Inner hub
                 canvas.drawCircle(it.inX, it.inY, it.innerRadius, hubPaint)
+
+                // Draw text below anchor
+                if(ticksMultipler > 1) {
+                    canvas.drawText(it.ticksMultiplerText?:"", it.inX, it.inY + it.tickMultTextOffSet, tickMultiplierTextPaint)
+                }
             }
             return
         }
@@ -518,8 +543,47 @@ class JayGauge @JvmOverloads constructor(
 
         // 2️⃣ Inner hub
         canvas.drawCircle(centerX, centerY, innerRadius, hubPaint)
-        needleAnchor = NeedleAnchor(outerRadius, innerRadius, centerX, centerY, centerX, centerY)
+
+
+
+        // Draw text below anchor
+        val textOffset = outerRadius * 3.25f
+
+        val ticksMultText = if(ticksMultipler>1) {
+            canvas.drawText("\u00D7$ticksMultipler", centerX, centerY + textOffset, tickMultiplierTextPaint)
+             "\u00D7$ticksMultipler"
+        }else{
+            null
+        }
+
+        needleAnchor = NeedleAnchor(outerRadius, innerRadius, centerX, centerY, centerX, centerY, textOffset, ticksMultText)
     }
+
+//    private fun drawNeedleAnchor(
+//        canvas: Canvas, centerX: Float, centerY: Float, radius: Float
+//    ) {
+//        if (needleAnchor != null) {
+//            needleAnchor?.let {
+//                // 1️⃣ Outer ring
+//                canvas.drawCircle(it.outX, it.outY, it.outerRadius, ringPaint)
+//
+//                // 2️⃣ Inner hub
+//                canvas.drawCircle(it.inX, it.inY, it.innerRadius, hubPaint)
+//            }
+//            return
+//        }
+//        // Size relative to gauge size
+//        val outerRadius = radius * 0.117f
+//        val innerRadius = outerRadius * 0.7f
+//
+//        // 1️⃣ Outer ring
+//        canvas.drawCircle(centerX, centerY, outerRadius, ringPaint)
+//
+//        // 2️⃣ Inner hub
+//        canvas.drawCircle(centerX, centerY, innerRadius, hubPaint)
+//        needleAnchor = NeedleAnchor(outerRadius, innerRadius, centerX, centerY, centerX, centerY)
+//    }
+
 
     //tick labels
     private data class TickLabel(
@@ -626,7 +690,7 @@ class JayGauge @JvmOverloads constructor(
             val angleDeg = startAngle + i * (sweepAngle / (numOfLabels - 1))
             val angleRad = Math.toRadians(angleDeg.toDouble())
 
-            val labelValue = minProgress + i * interval
+            var labelValue = minProgress + i * interval
 
             val labelX = centerX + labelRadius * cos(angleRad).toFloat()
             val labelY =
@@ -637,11 +701,15 @@ class JayGauge @JvmOverloads constructor(
             } else {
                 getTickDisabledColor()
             }
+            //tick multiplier
+            labelValue = labelValue/ticksMultipler
 
             val tickValueText = when (unit) {
                 Units.GHZ -> String.format(Locale.US, "%.1f", labelValue)
+                Units.MHZ -> if(ticksMultipler>1){String.format(Locale.US, "%.1f", labelValue)}else{labelValue.toInt().toString()}
                 else -> labelValue.toInt().toString()
             }
+
             val tickLabel = TickLabel(labelX, labelY, tickValueText, labelValue)
             tickLabels.add(tickLabel)
 
