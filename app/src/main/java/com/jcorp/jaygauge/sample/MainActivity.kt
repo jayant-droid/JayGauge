@@ -49,6 +49,7 @@ class MainActivity : AppCompatActivity() {
             setMaxProgress(100f)
             setNumOfTicks(9)
         }
+        binding.gaugeTwo.setTicksMultiplier(1000)
 
 
         //set gaugeListener to listen for callbacks

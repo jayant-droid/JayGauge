@@ -34,7 +34,6 @@
             android:id="@+id/gaugeTwo"
             android:layout_width="200dp"
             android:layout_height="200dp"
-            app:ticksMultiplier="1000"
             app:minProgress="0"
             app:maxProgress="2100"
             app:gaugeTheme="light"

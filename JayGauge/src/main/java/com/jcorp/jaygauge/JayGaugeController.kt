@@ -14,4 +14,6 @@ interface JayGaugeController {
     fun getMinProgress():Float
     fun getMaxProgress():Float
 
+    fun setTicksMultiplier(ticksMultiplier: Int)
+
 }

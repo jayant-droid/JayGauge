@@ -136,7 +136,7 @@ class JayGauge @JvmOverloads constructor(
     private val tickMultiplierTextPaint by lazy {
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = lightBlackTextColor
-            textSize = 24f
+            textSize = 32f
             typeface = uniformCondensedMedium
             textAlign = Paint.Align.CENTER
 
@@ -529,6 +529,7 @@ class JayGauge @JvmOverloads constructor(
 
                 // Draw text below anchor
                 if(ticksMultipler > 1) {
+                    tickMultiplierTextPaint.textSize = tickTextPaint.textSize - 10
                     canvas.drawText(it.ticksMultiplerText?:"", it.inX, it.inY + it.tickMultTextOffSet, tickMultiplierTextPaint)
                 }
             }
@@ -550,6 +551,7 @@ class JayGauge @JvmOverloads constructor(
         val textOffset = outerRadius * 3.25f
 
         val ticksMultText = if(ticksMultipler>1) {
+            tickMultiplierTextPaint.textSize = tickTextPaint.textSize - 10
             canvas.drawText("\u00D7$ticksMultipler", centerX, centerY + textOffset, tickMultiplierTextPaint)
              "\u00D7$ticksMultipler"
         }else{
@@ -1304,5 +1306,10 @@ class JayGauge @JvmOverloads constructor(
 
     override fun getMinProgress(): Float = minProgress
     override fun getMaxProgress(): Float = maxProgress
+    override fun setTicksMultiplier(ticksMultiplier: Int) {
+        this.ticksMultipler = ticksMultiplier
+        needleAnchor=null
+        invalidate()
+    }
 
 }
