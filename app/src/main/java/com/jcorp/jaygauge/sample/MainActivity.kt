@@ -1,6 +1,8 @@
 package com.jcorp.jaygauge.sample
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.AdapterView
 import androidx.activity.enableEdgeToEdge
@@ -49,7 +51,10 @@ class MainActivity : AppCompatActivity() {
             setMaxProgress(100f)
             setNumOfTicks(9)
         }
-        binding.gaugeTwo.setTicksMultiplier(1000)
+        Handler(Looper.getMainLooper()).postDelayed({
+            binding.gaugeTwo.setTicksMultiplier(1000)
+
+        },3000)
 
 
         //set gaugeListener to listen for callbacks

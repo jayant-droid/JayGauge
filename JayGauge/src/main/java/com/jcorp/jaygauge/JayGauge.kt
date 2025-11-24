@@ -1309,6 +1309,7 @@ class JayGauge @JvmOverloads constructor(
     override fun setTicksMultiplier(ticksMultiplier: Int) {
         this.ticksMultipler = ticksMultiplier
         needleAnchor=null
+        isTickLabelPrepared = false
         invalidate()
     }
 
