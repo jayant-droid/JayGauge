@@ -756,7 +756,7 @@ private fun drawTickLabels(
 
     val unitBias = when (unit) {
         Units.TEMPERATURE_C, Units.TEMPERATURE_F -> 1.05f
-        Units.MHZ -> 0.92f
+        Units.MHZ -> 0.8f
         else -> 1f
     }
 
@@ -768,7 +768,7 @@ private fun drawTickLabels(
 
     // ---------- Label radius ----------
     var labelRadiusFraction = when (unit) {
-        Units.MHZ->0.68f
+        Units.MHZ->0.70f
         Units.TEMPERATURE_C, Units.TEMPERATURE_F -> 0.70f
         else -> 0.73f
     }
