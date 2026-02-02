@@ -600,127 +600,239 @@ class JayGauge @JvmOverloads constructor(
     // for error correction, not needed with curr logic
     private val labelHighlightOffset = 0f
     val defaultNumOfLabels = 9
-    private fun drawTickLabels(
-        canvas: Canvas, centerX: Float, centerY: Float, radius: Float
-    ) {
-        if (isTickLabelPrepared) {
-            tickLabels.forEach {
-                //only calculate if needle reaches the label
-                tickTextPaint.color = if (currentValue >= it.labelValue - labelHighlightOffset) {
+//    private fun drawTickLabels(
+//        canvas: Canvas, centerX: Float, centerY: Float, radius: Float
+//    ) {
+//        if (isTickLabelPrepared) {
+//            tickLabels.forEach {
+//                //only calculate if needle reaches the label
+//                tickTextPaint.color = if (currentValue >= it.labelValue - labelHighlightOffset) {
+//                    getTextColor()
+//                } else {
+//                    getTickDisabledColor()
+//                }
+//                canvas.drawText(
+//                    it.tickValueText, it.labelX, it.labelY, tickTextPaint
+//                )
+//            }
+//            return
+//        }
+//        tickLabels.clear()
+//        val gaugePaddingFraction = 0.05f // tweak if you want margin at edges
+//        val availableRadius = radius * (1f - gaugePaddingFraction)
+//        var percentageDelta = 0f
+//        var inCreaseTextSize = false
+//        if (defaultNumOfLabels != numOfLabels) {
+//            val labelSizeDiff = if (numOfLabels > defaultNumOfLabels) {
+//                inCreaseTextSize = false
+//                numOfLabels - defaultNumOfLabels
+//            } else {
+//                inCreaseTextSize = true
+//                defaultNumOfLabels - numOfLabels
+//            }
+//            percentageDelta = (labelSizeDiff.toFloat() / defaultNumOfLabels) * 100
+//        }
+//
+//        var tickTextSizeFraction = when (unit) {
+//            Units.TEMPERATURE_C, Units.TEMPERATURE_F -> {
+//                0.25f
+//            }
+//
+//            Units.GHZ -> {
+//                0.22f
+//            }
+//
+//            Units.MHZ -> {
+//                0.18f
+//            }
+//
+//            else -> {
+//                0.22f
+//            }
+//        }
+//        if (percentageDelta > 0f) {
+//            val changeInTextSize = (((tickTextSizeFraction * (percentageDelta / 1.8f)) / 100))
+//            tickTextSizeFraction = if (inCreaseTextSize) {
+//                tickTextSizeFraction + changeInTextSize
+//            } else {
+//                tickTextSizeFraction - changeInTextSize
+//            }
+//        }
+//        var labelRadiusFraction = when (unit) {
+//            Units.TEMPERATURE_C, Units.TEMPERATURE_F -> {
+//                0.70f
+//            }
+//
+//            Units.GHZ -> {
+//                0.73f
+//            }
+//
+//            else -> {
+//                0.73f
+//            }
+//        }
+//        if (percentageDelta > 0f) {
+//            val changeInLabelRadius = (((labelRadiusFraction * (percentageDelta / 10)) / 100))
+//            labelRadiusFraction = if (inCreaseTextSize) {
+//                labelRadiusFraction - changeInLabelRadius
+//            } else {
+//                labelRadiusFraction + changeInLabelRadius
+//            }
+//        }
+//        tickTextPaint.textSize = (availableRadius * tickTextSizeFraction).coerceIn(42f, 100f)
+//
+//        val interval = (maxProgress - minProgress) / (numOfLabels - 1)
+//
+//        // ✅ Dynamic label radius based on gauge radius:
+//        val labelRadius =
+//            (radius * labelRadiusFraction).coerceAtMost(radius - (progressArcPaint.strokeWidth * 0.90f)) // tweak 0.8 ~ 0.85 for style this affects spacing between
+//        // gauge arc and text labels
+//
+//        for (i in 0 until numOfLabels) {
+//            val angleDeg = startAngle + i * (sweepAngle / (numOfLabels - 1))
+//            val angleRad = Math.toRadians(angleDeg.toDouble())
+//
+//            var labelValue = minProgress + i * interval
+//
+//            val labelX = centerX + labelRadius * cos(angleRad).toFloat()
+//            val labelY =
+//                centerY + labelRadius * sin(angleRad).toFloat() + tickTextPaint.textSize / 3
+//
+//            tickTextPaint.color = if (currentValue >= labelValue - labelHighlightOffset) {
+//                getTextColor()
+//            } else {
+//                getTickDisabledColor()
+//            }
+//            //tick multiplier
+//            labelValue = labelValue/ticksMultipler
+//
+//            val tickValueText = when (unit) {
+//                Units.GHZ -> String.format(Locale.US, "%.1f", labelValue)
+//                Units.MHZ -> if(ticksMultipler>1){String.format(Locale.US, "%.1f", labelValue)}else{labelValue.toInt().toString()}
+//                else -> labelValue.toInt().toString()
+//            }
+//
+//            val tickLabel = TickLabel(labelX, labelY, tickValueText, labelValue)
+//            tickLabels.add(tickLabel)
+//
+//            canvas.drawText(
+//                tickValueText, labelX, labelY, tickTextPaint
+//            )
+//        }
+//        isTickLabelPrepared = true
+//    }
+private fun drawTickLabels(
+    canvas: Canvas,
+    centerX: Float,
+    centerY: Float,
+    radius: Float
+) {
+    // ---------- Fast path ----------
+    if (isTickLabelPrepared) {
+        tickLabels.forEach {
+            tickTextPaint.color =
+                if (currentValue >= it.labelValue - labelHighlightOffset)
                     getTextColor()
-                } else {
+                else
                     getTickDisabledColor()
-                }
-                canvas.drawText(
-                    it.tickValueText, it.labelX, it.labelY, tickTextPaint
-                )
-            }
-            return
+
+            canvas.drawText(it.tickValueText, it.labelX, it.labelY, tickTextPaint)
         }
-        tickLabels.clear()
-        val gaugePaddingFraction = 0.05f // tweak if you want margin at edges
-        val availableRadius = radius * (1f - gaugePaddingFraction)
-        var percentageDelta = 0f
-        var inCreaseTextSize = false
-        if (defaultNumOfLabels != numOfLabels) {
-            val labelSizeDiff = if (numOfLabels > defaultNumOfLabels) {
-                inCreaseTextSize = false
-                numOfLabels - defaultNumOfLabels
-            } else {
-                inCreaseTextSize = true
-                defaultNumOfLabels - numOfLabels
-            }
-            percentageDelta = (labelSizeDiff.toFloat() / defaultNumOfLabels) * 100
-        }
-
-        var tickTextSizeFraction = when (unit) {
-            Units.TEMPERATURE_C, Units.TEMPERATURE_F -> {
-                0.25f
-            }
-
-            Units.GHZ -> {
-                0.22f
-            }
-
-            Units.MHZ -> {
-                0.18f
-            }
-
-            else -> {
-                0.22f
-            }
-        }
-        if (percentageDelta > 0f) {
-            val changeInTextSize = (((tickTextSizeFraction * (percentageDelta / 1.8f)) / 100))
-            tickTextSizeFraction = if (inCreaseTextSize) {
-                tickTextSizeFraction + changeInTextSize
-            } else {
-                tickTextSizeFraction - changeInTextSize
-            }
-        }
-        var labelRadiusFraction = when (unit) {
-            Units.TEMPERATURE_C, Units.TEMPERATURE_F -> {
-                0.70f
-            }
-
-            Units.GHZ -> {
-                0.73f
-            }
-
-            else -> {
-                0.73f
-            }
-        }
-        if (percentageDelta > 0f) {
-            val changeInLabelRadius = (((labelRadiusFraction * (percentageDelta / 10)) / 100))
-            labelRadiusFraction = if (inCreaseTextSize) {
-                labelRadiusFraction - changeInLabelRadius
-            } else {
-                labelRadiusFraction + changeInLabelRadius
-            }
-        }
-        tickTextPaint.textSize = (availableRadius * tickTextSizeFraction).coerceIn(42f, 100f)
-
-        val interval = (maxProgress - minProgress) / (numOfLabels - 1)
-
-        // ✅ Dynamic label radius based on gauge radius:
-        val labelRadius =
-            (radius * labelRadiusFraction).coerceAtMost(radius - (progressArcPaint.strokeWidth * 0.90f)) // tweak 0.8 ~ 0.85 for style this affects spacing between
-        // gauge arc and text labels
-
-        for (i in 0 until numOfLabels) {
-            val angleDeg = startAngle + i * (sweepAngle / (numOfLabels - 1))
-            val angleRad = Math.toRadians(angleDeg.toDouble())
-
-            var labelValue = minProgress + i * interval
-
-            val labelX = centerX + labelRadius * cos(angleRad).toFloat()
-            val labelY =
-                centerY + labelRadius * sin(angleRad).toFloat() + tickTextPaint.textSize / 3
-
-            tickTextPaint.color = if (currentValue >= labelValue - labelHighlightOffset) {
-                getTextColor()
-            } else {
-                getTickDisabledColor()
-            }
-            //tick multiplier
-            labelValue = labelValue/ticksMultipler
-
-            val tickValueText = when (unit) {
-                Units.GHZ -> String.format(Locale.US, "%.1f", labelValue)
-                Units.MHZ -> if(ticksMultipler>1){String.format(Locale.US, "%.1f", labelValue)}else{labelValue.toInt().toString()}
-                else -> labelValue.toInt().toString()
-            }
-
-            val tickLabel = TickLabel(labelX, labelY, tickValueText, labelValue)
-            tickLabels.add(tickLabel)
-
-            canvas.drawText(
-                tickValueText, labelX, labelY, tickTextPaint
-            )
-        }
-        isTickLabelPrepared = true
+        return
     }
+
+    tickLabels.clear()
+
+    val density = resources.displayMetrics.density
+
+    // ---------- Radius & padding ----------
+    val gaugePaddingFraction = 0.05f
+    val availableRadius = radius * (1f - gaugePaddingFraction)
+
+    // ---------- Dynamic text size (geometry driven) ----------
+    val sweepRad = Math.toRadians(sweepAngle.toDouble()).toFloat()
+    val arcLength = sweepRad * availableRadius
+    val arcPerLabel = arcLength / numOfLabels
+
+    val unitBias = when (unit) {
+        Units.TEMPERATURE_C, Units.TEMPERATURE_F -> 1.05f
+        Units.MHZ -> 0.92f
+        else -> 1f
+    }
+
+    val minTextPx = 9f * density
+    val maxTextPx = 26f * density
+
+    tickTextPaint.textSize =
+        (arcPerLabel * 0.45f * unitBias).coerceIn(minTextPx, maxTextPx)
+
+    // ---------- Label radius ----------
+    var labelRadiusFraction = when (unit) {
+        Units.MHZ->0.68f
+        Units.TEMPERATURE_C, Units.TEMPERATURE_F -> 0.70f
+        else -> 0.73f
+    }
+
+    if (numOfLabels != defaultNumOfLabels) {
+        val delta =
+            kotlin.math.abs(numOfLabels - defaultNumOfLabels).toFloat() /
+                    defaultNumOfLabels
+        labelRadiusFraction +=
+            if (numOfLabels > defaultNumOfLabels) delta * 0.12f else -delta * 0.08f
+    }
+
+    val labelRadius = (radius * labelRadiusFraction)
+        .coerceAtMost(radius - progressArcPaint.strokeWidth * 0.9f)
+
+    // ---------- Font metrics (perfect vertical centering) ----------
+    val fm = tickTextPaint.fontMetrics
+    val textCenterOffset = (fm.ascent + fm.descent) / 2f
+
+    // ---------- Value math ----------
+    val interval = (maxProgress - minProgress) / (numOfLabels - 1)
+
+    // ---------- Draw & cache labels ----------
+    for (i in 0 until numOfLabels) {
+        val angleDeg = startAngle + i * (sweepAngle / (numOfLabels - 1))
+        val angleRad = Math.toRadians(angleDeg.toDouble())
+
+        val rawValue = minProgress + i * interval
+        val displayValue = rawValue / ticksMultipler
+
+        val x = centerX + labelRadius * cos(angleRad).toFloat()
+        val y = centerY + labelRadius * sin(angleRad).toFloat() - textCenterOffset
+
+        val text = when (unit) {
+            Units.GHZ -> String.format(Locale.US, "%.1f", displayValue)
+            Units.MHZ ->
+                if (ticksMultipler > 1)
+                    String.format(Locale.US, "%.1f", displayValue)
+                else
+                    displayValue.toInt().toString()
+            else -> displayValue.toInt().toString()
+        }
+
+        tickTextPaint.color =
+            if (currentValue >= rawValue - labelHighlightOffset)
+                getTextColor()
+            else
+                getTickDisabledColor()
+
+        tickLabels.add(
+            TickLabel(
+                labelX = x,
+                labelY = y,
+                tickValueText = text,
+                labelValue = rawValue
+            )
+        )
+
+        canvas.drawText(text, x, y, tickTextPaint)
+    }
+
+    isTickLabelPrepared = true
+}
+
 
 
     private fun getTickDisabledColor(): Int = if (gaugeTheme == GaugeTheme.LIGHT) {

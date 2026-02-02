@@ -34,6 +34,9 @@ class MainActivity : AppCompatActivity() {
         //gauge one has demo mode on, not data needed
         //will show progress changes on it's own
         viewModel.clockSpeed.observe(this@MainActivity){
+            binding.gaugeFour.setProgress(it)
+        }
+        viewModel.gpuClockSpeed.observe(this@MainActivity){
             binding.gaugeTwo.setProgress(it)
         }
         viewModel.temperature.observe(this@MainActivity){
@@ -51,10 +54,10 @@ class MainActivity : AppCompatActivity() {
             setMaxProgress(100f)
             setNumOfTicks(9)
         }
-        Handler(Looper.getMainLooper()).postDelayed({
-            binding.gaugeTwo.setTicksMultiplier(1000)
-
-        },3000)
+//        Handler(Looper.getMainLooper()).postDelayed({
+//            binding.gaugeTwo.setTicksMultiplier(1000)
+//
+//        },3000)
 
 
         //set gaugeListener to listen for callbacks
@@ -69,7 +72,7 @@ class MainActivity : AppCompatActivity() {
                 //start setting Progress now
                 val min=binding.gaugeTwo.getMinProgress()
                 val max=binding.gaugeTwo.getMaxProgress()
-                viewModel.startCpuGauge(min,max)
+                viewModel.startGpuGauge(min,max)
 
 
             }
@@ -86,6 +89,20 @@ class MainActivity : AppCompatActivity() {
                 val min=binding.gaugeThree.getMinProgress()
                 val max=binding.gaugeThree.getMaxProgress()
                 viewModel.startTempGauge(min,max)
+            }
+
+        })
+        binding.gaugeFour.setGaugeListener(object : GaugeListener{
+            override fun onGaugePreparing() {
+                //wait for  the warm up animation
+            }
+
+            override fun onGaugePrepared() {
+                //warm up animation ends now gauge is ready to use
+                //start setting Progress now
+                val min=binding.gaugeFour.getMinProgress()
+                val max=binding.gaugeFour.getMaxProgress()
+                viewModel.startCpuGauge(min,max)
             }
 
         })

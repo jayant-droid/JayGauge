@@ -44,7 +44,7 @@ publishing {
         create<MavenPublication>("release") {
             groupId = "com.jcorp"
             artifactId = "jaygauge"
-            version = "1.0.0-Alpha"
+            version = "1.0.0-Beta01"
 
             afterEvaluate {
                 from(components["release"])
