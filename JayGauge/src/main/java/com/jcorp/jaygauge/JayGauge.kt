@@ -33,6 +33,8 @@ class JayGauge @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null
 ) : View(context, attrs), JayGaugeController {
 
+    private var hasRealValue = false
+
     // Configurable
     private var minProgress = 0f
     private var maxProgress = 100f
@@ -983,6 +985,14 @@ class JayGauge @JvmOverloads constructor(
     }
 
     private fun getFormattedValueText(): String {
+        // No real value yet → show placeholder
+        // Show placeholder ONLY when:
+        // - gauge prepared
+        // - no real value
+        // - demo mode OFF
+        if (!hasRealValue && isPrepared && !isSweeping) {
+            return getPlaceholderText()
+        }
         val isCustomUnit = customUnit != null
 
         val pattern = if (isCustomUnit) {
@@ -1147,7 +1157,32 @@ class JayGauge @JvmOverloads constructor(
     }
 
     //exposed functions to control JayGauge
+    private fun getPlaceholderText(): String {
+        val pattern = if (customUnit != null) {
+            unit.valuePattern
+        } else {
+            unit.valuePattern
+        }
 
+        return when {
+            pattern.contains(".") -> {
+                // Example: "00.0" → "--.-"
+                pattern.map {
+                    when (it) {
+                        '.' -> '.'
+                        else -> '-'
+                    }
+                }.joinToString("")
+            }
+
+            pattern.isNotEmpty() -> {
+                // Example: "000" → "---"
+                "-".repeat(pattern.length)
+            }
+
+            else -> "-"
+        }
+    }
     override fun isDemoMode(isOn: Boolean) {
         if (isOn) {
             if (isSweeping) return // already running
@@ -1160,8 +1195,10 @@ class JayGauge @JvmOverloads constructor(
                 isSweeping = false
                 sweepAnimator?.cancel()
                 removeCallbacks(sweepRunnable)
+
+                hasRealValue = false
+
                 setProgress(minProgress)
-                //invalidate()
                 postInvalidateOnAnimation()
             }
         }
@@ -1199,6 +1236,9 @@ class JayGauge @JvmOverloads constructor(
 
     override fun setProgress(progress: Float) {
         if (isSweeping) return
+
+        hasRealValue = true   // key line
+
         if (progress.hasDecimal()) {
             setValue(progress)
         } else {
