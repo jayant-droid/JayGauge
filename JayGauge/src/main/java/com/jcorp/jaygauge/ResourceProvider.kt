@@ -2,17 +2,9 @@ package com.jcorp.jaygauge
 
 import android.content.Context
 
-object ResourceProvider {
-    lateinit var colorProducer: ColorProducer
-    lateinit var fontProducer: FontProducer
-
-    lateinit var paintProducer: GaugePaintProducer
-
-
-    fun init(context: Context) {
-        colorProducer = ColorProducer(context)
-        fontProducer = FontProducer(context)
-        paintProducer = GaugePaintProducer(colorProducer,fontProducer)
-    }
+class ResourceProvider(context: Context) {
+    val colorProducer: ColorProducer = ColorProducer(context)
+    val fontProducer: FontProducer = FontProducer(context)
+    val paintProducer: GaugePaintProducer = GaugePaintProducer(colorProducer,fontProducer)
 }
 

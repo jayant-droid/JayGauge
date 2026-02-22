@@ -57,10 +57,11 @@ class JayGauge @JvmOverloads constructor(
 
     private var numOfLabels = 9
 
-    private var ticksMultipler= 1
+    private var ticksMultipler = 1
 
 
     private val pollInterval: Long = 2000L
+
     //attributes
     private val typedArray by lazy {
         context.theme.obtainStyledAttributes(
@@ -89,19 +90,29 @@ class JayGauge @JvmOverloads constructor(
     private val valueInterpolator by lazy {
         AccelerateDecelerateInterpolator()
     }
+
     //cache tick labels
     private var isTickLabelPrepared = false
     private val tickLabels = mutableListOf<TickLabel>()
 
     //cache sweep gradient
-    var arcGradient:SweepGradient? =null
+    var arcGradient: SweepGradient? = null
 
+
+    lateinit var paintProducer: GaugePaintProducer
+    lateinit var colorProducer: ColorProducer
 
     //init block
     init {
         setLayerType(LAYER_TYPE_HARDWARE, null)
-        ResourceProvider.init(context)
+        setupProviders()//init before calling setupAttributes
         setupAttributes()
+    }
+
+    private fun setupProviders() {
+        val resourceProvider = ResourceProvider(context)
+        colorProducer = resourceProvider.colorProducer
+        paintProducer = resourceProvider.paintProducer
     }
 
     //xml attributes
@@ -118,7 +129,8 @@ class JayGauge @JvmOverloads constructor(
                 typedArray.getInt(R.styleable.JayGauge_numOfTicks, numOfLabels)
             isTickLabelPrepared = false
         }
-        fun setTicksMultiplier(){
+
+        fun setTicksMultiplier() {
             ticksMultipler = typedArray.getInt(R.styleable.JayGauge_ticksMultiplier, 1)
         }
 
@@ -150,22 +162,26 @@ class JayGauge @JvmOverloads constructor(
                     // Light background
                     setBackgroundColor(Color.TRANSPARENT)
                     // Text
-                    ResourceProvider.paintProducer.valueTextPaint.color = ResourceProvider.colorProducer.blackDefaultTextColor
-                    ResourceProvider.paintProducer.unitTextPaint.color = ResourceProvider.colorProducer.blackDefaultTextColor
-                    ResourceProvider.paintProducer.tickTextPaint.color = ResourceProvider.colorProducer.lightBlackTextColor
-                    ResourceProvider.paintProducer.tickMultiplierTextPaint.color = ResourceProvider.colorProducer.lightBlackTextColor
+                    paintProducer.valueTextPaint.color =
+                        colorProducer.blackDefaultTextColor
+                    paintProducer.unitTextPaint.color =
+                        colorProducer.blackDefaultTextColor
+                    paintProducer.tickTextPaint.color =
+                        colorProducer.lightBlackTextColor
+                    paintProducer.tickMultiplierTextPaint.color =
+                        colorProducer.lightBlackTextColor
 
                     // Arc
-                    ResourceProvider.paintProducer.bgArcPaint.color = Color.LTGRAY
+                    paintProducer.bgArcPaint.color = Color.LTGRAY
                 }
 
                 GaugeTheme.DARK -> {
                     setBackgroundColor(Color.TRANSPARENT)
-                    ResourceProvider.paintProducer.valueTextPaint.color = Color.WHITE
-                    ResourceProvider.paintProducer.unitTextPaint.color = Color.WHITE
-                    ResourceProvider.paintProducer.tickTextPaint.color = Color.LTGRAY
-                    ResourceProvider.paintProducer.bgArcPaint.color = Color.DKGRAY
-                    ResourceProvider.paintProducer.tickMultiplierTextPaint.color = Color.LTGRAY
+                    paintProducer.valueTextPaint.color = Color.WHITE
+                    paintProducer.unitTextPaint.color = Color.WHITE
+                    paintProducer.tickTextPaint.color = Color.LTGRAY
+                    paintProducer.bgArcPaint.color = Color.DKGRAY
+                    paintProducer.tickMultiplierTextPaint.color = Color.LTGRAY
 
                 }
             }
@@ -206,7 +222,7 @@ class JayGauge @JvmOverloads constructor(
             setUpArcTheme()
             setUpDemoMode()
             invalidate()
-        }finally {
+        } finally {
             typedArray.recycle()
         }
     }
@@ -271,8 +287,6 @@ class JayGauge @JvmOverloads constructor(
             }
         }
     }
-
-
 
 
     private fun setValue(targetValue: Float) {
@@ -356,13 +370,13 @@ class JayGauge @JvmOverloads constructor(
         val bgStrokeWidth = baseStrokeWidth * 0.83f  // For bg arc
         val glowStrokeWidth = baseStrokeWidth  // For glow
 
-        ResourceProvider.paintProducer.bgArcPaint.strokeWidth = bgStrokeWidth
-        ResourceProvider.paintProducer.progressArcPaint.strokeWidth = baseStrokeWidth
+        paintProducer.bgArcPaint.strokeWidth = bgStrokeWidth
+        paintProducer.progressArcPaint.strokeWidth = baseStrokeWidth
 
-        ResourceProvider.paintProducer.glowArcPaint.strokeWidth = glowStrokeWidth
+        paintProducer.glowArcPaint.strokeWidth = glowStrokeWidth
 
         // Also scale glow blur if needed:
-        ResourceProvider.paintProducer.glowArcPaint.maskFilter =
+        paintProducer.glowArcPaint.maskFilter =
             BlurMaskFilter(baseStrokeWidth.coerceAtLeast(8f), BlurMaskFilter.Blur.NORMAL)
     }
 
@@ -398,7 +412,6 @@ class JayGauge @JvmOverloads constructor(
     }
 
 
-
     private fun setMainArcRadius() {
         centerX = width / 2f
         centerY = height / 2f
@@ -408,8 +421,13 @@ class JayGauge @JvmOverloads constructor(
     // needle anchor
     private data class NeedleAnchor(
         val outerRadius: Float,
-        val innerRadius: Float, val outX: Float, val outY: Float,
-        val inX: Float, val inY: Float, val tickMultTextOffSet: Float, val ticksMultiplerText: String?
+        val innerRadius: Float,
+        val outX: Float,
+        val outY: Float,
+        val inX: Float,
+        val inY: Float,
+        val tickMultTextOffSet: Float,
+        val ticksMultiplerText: String?
     )
 
     private var needleAnchor: NeedleAnchor? = null
@@ -434,6 +452,7 @@ class JayGauge @JvmOverloads constructor(
             color = anchorInnerColor
         }
     }
+
     private fun drawNeedleAnchor(
         canvas: Canvas, centerX: Float, centerY: Float, radius: Float
     ) {
@@ -446,10 +465,13 @@ class JayGauge @JvmOverloads constructor(
                 canvas.drawCircle(it.inX, it.inY, it.innerRadius, hubPaint)
 
                 // Draw text below anchor
-                if(ticksMultipler > 1) {
-                    ResourceProvider.paintProducer.tickMultiplierTextPaint.textSize = ResourceProvider.paintProducer.tickTextPaint.textSize - 10
-                    canvas.drawText(it.ticksMultiplerText?:"", it.inX, it.inY + it.tickMultTextOffSet,
-                        ResourceProvider.paintProducer.tickMultiplierTextPaint)
+                if (ticksMultipler > 1) {
+                    paintProducer.tickMultiplierTextPaint.textSize =
+                        paintProducer.tickTextPaint.textSize - 10
+                    canvas.drawText(
+                        it.ticksMultiplerText ?: "", it.inX, it.inY + it.tickMultTextOffSet,
+                        paintProducer.tickMultiplierTextPaint
+                    )
                 }
             }
             return
@@ -465,19 +487,33 @@ class JayGauge @JvmOverloads constructor(
         canvas.drawCircle(centerX, centerY, innerRadius, hubPaint)
 
 
-
         // Draw text below anchor
         val textOffset = outerRadius * 3.25f
 
-        val ticksMultText = if(ticksMultipler>1) {
-            ResourceProvider.paintProducer.tickMultiplierTextPaint.textSize = ResourceProvider.paintProducer.tickTextPaint.textSize - 10
-            canvas.drawText("\u00D7$ticksMultipler", centerX, centerY + textOffset, ResourceProvider.paintProducer.tickMultiplierTextPaint)
-             "\u00D7$ticksMultipler"
-        }else{
+        val ticksMultText = if (ticksMultipler > 1) {
+            paintProducer.tickMultiplierTextPaint.textSize =
+                paintProducer.tickTextPaint.textSize - 10
+            canvas.drawText(
+                "\u00D7$ticksMultipler",
+                centerX,
+                centerY + textOffset,
+                paintProducer.tickMultiplierTextPaint
+            )
+            "\u00D7$ticksMultipler"
+        } else {
             null
         }
 
-        needleAnchor = NeedleAnchor(outerRadius, innerRadius, centerX, centerY, centerX, centerY, textOffset, ticksMultText)
+        needleAnchor = NeedleAnchor(
+            outerRadius,
+            innerRadius,
+            centerX,
+            centerY,
+            centerX,
+            centerY,
+            textOffset,
+            ticksMultText
+        )
     }
 
 
@@ -486,126 +522,127 @@ class JayGauge @JvmOverloads constructor(
         val labelX: Float, val labelY: Float, val tickValueText: String,
         val labelValue: Float
     )
+
     private val labelHighlightOffset = 0f
     val defaultNumOfLabels = 9
-private fun drawTickLabels(
-    canvas: Canvas,
-    centerX: Float,
-    centerY: Float,
-    radius: Float
-) {
-    // ---------- Fast path ----------
-    if (isTickLabelPrepared) {
-        tickLabels.forEach {
-            ResourceProvider.paintProducer.tickTextPaint.color =
-                if (currentValue >= it.labelValue - labelHighlightOffset)
+    private fun drawTickLabels(
+        canvas: Canvas,
+        centerX: Float,
+        centerY: Float,
+        radius: Float
+    ) {
+        // ---------- Fast path ----------
+        if (isTickLabelPrepared) {
+            tickLabels.forEach {
+                paintProducer.tickTextPaint.color =
+                    if (currentValue >= it.labelValue - labelHighlightOffset)
+                        getTextColor()
+                    else
+                        getTickDisabledColor()
+
+                canvas.drawText(it.tickValueText, it.labelX, it.labelY, paintProducer.tickTextPaint)
+            }
+            return
+        }
+
+        tickLabels.clear()
+
+        val density = resources.displayMetrics.density
+
+        // ---------- Radius & padding ----------
+        val gaugePaddingFraction = 0.05f
+        val availableRadius = radius * (1f - gaugePaddingFraction)
+
+        // ---------- Dynamic text size (geometry driven) ----------
+        val sweepRad = Math.toRadians(sweepAngle.toDouble()).toFloat()
+        val arcLength = sweepRad * availableRadius
+        val arcPerLabel = arcLength / numOfLabels
+
+        val unitBias = when (unit) {
+            Units.TEMPERATURE_C, Units.TEMPERATURE_F -> 1.05f
+            Units.MHZ -> 0.8f
+            else -> 1f
+        }
+
+        val minTextPx = 9f * density
+        val maxTextPx = 26f * density
+
+        paintProducer.tickTextPaint.textSize =
+            (arcPerLabel * 0.45f * unitBias).coerceIn(minTextPx, maxTextPx)
+
+        // ---------- Label radius ----------
+        var labelRadiusFraction = when (unit) {
+            Units.MHZ -> 0.70f
+            Units.TEMPERATURE_C, Units.TEMPERATURE_F -> 0.70f
+            else -> 0.73f
+        }
+
+        if (numOfLabels != defaultNumOfLabels) {
+            val delta =
+                kotlin.math.abs(numOfLabels - defaultNumOfLabels).toFloat() /
+                        defaultNumOfLabels
+            labelRadiusFraction +=
+                if (numOfLabels > defaultNumOfLabels) delta * 0.12f else -delta * 0.08f
+        }
+
+        val labelRadius = (radius * labelRadiusFraction)
+            .coerceAtMost(radius - paintProducer.progressArcPaint.strokeWidth * 0.9f)
+
+        // ---------- Font metrics (perfect vertical centering) ----------
+        val fm = paintProducer.tickTextPaint.fontMetrics
+        val textCenterOffset = (fm.ascent + fm.descent) / 2f
+
+        // ---------- Value math ----------
+        val interval = (maxProgress - minProgress) / (numOfLabels - 1)
+
+        // ---------- Draw & cache labels ----------
+        for (i in 0 until numOfLabels) {
+            val angleDeg = startAngle + i * (sweepAngle / (numOfLabels - 1))
+            val angleRad = Math.toRadians(angleDeg.toDouble())
+
+            val rawValue = minProgress + i * interval
+            val displayValue = rawValue / ticksMultipler
+
+            val x = centerX + labelRadius * cos(angleRad).toFloat()
+            val y = centerY + labelRadius * sin(angleRad).toFloat() - textCenterOffset
+
+            val text = when (unit) {
+                Units.GHZ -> String.format(Locale.US, "%.1f", displayValue)
+                Units.MHZ ->
+                    if (ticksMultipler > 1)
+                        String.format(Locale.US, "%.1f", displayValue)
+                    else
+                        displayValue.toInt().toString()
+
+                else -> displayValue.toInt().toString()
+            }
+
+            paintProducer.tickTextPaint.color =
+                if (currentValue >= rawValue - labelHighlightOffset)
                     getTextColor()
                 else
                     getTickDisabledColor()
 
-            canvas.drawText(it.tickValueText, it.labelX, it.labelY, ResourceProvider.paintProducer.tickTextPaint)
-        }
-        return
-    }
-
-    tickLabels.clear()
-
-    val density = resources.displayMetrics.density
-
-    // ---------- Radius & padding ----------
-    val gaugePaddingFraction = 0.05f
-    val availableRadius = radius * (1f - gaugePaddingFraction)
-
-    // ---------- Dynamic text size (geometry driven) ----------
-    val sweepRad = Math.toRadians(sweepAngle.toDouble()).toFloat()
-    val arcLength = sweepRad * availableRadius
-    val arcPerLabel = arcLength / numOfLabels
-
-    val unitBias = when (unit) {
-        Units.TEMPERATURE_C, Units.TEMPERATURE_F -> 1.05f
-        Units.MHZ -> 0.8f
-        else -> 1f
-    }
-
-    val minTextPx = 9f * density
-    val maxTextPx = 26f * density
-
-    ResourceProvider.paintProducer.tickTextPaint.textSize =
-        (arcPerLabel * 0.45f * unitBias).coerceIn(minTextPx, maxTextPx)
-
-    // ---------- Label radius ----------
-    var labelRadiusFraction = when (unit) {
-        Units.MHZ->0.70f
-        Units.TEMPERATURE_C, Units.TEMPERATURE_F -> 0.70f
-        else -> 0.73f
-    }
-
-    if (numOfLabels != defaultNumOfLabels) {
-        val delta =
-            kotlin.math.abs(numOfLabels - defaultNumOfLabels).toFloat() /
-                    defaultNumOfLabels
-        labelRadiusFraction +=
-            if (numOfLabels > defaultNumOfLabels) delta * 0.12f else -delta * 0.08f
-    }
-
-    val labelRadius = (radius * labelRadiusFraction)
-        .coerceAtMost(radius - ResourceProvider.paintProducer.progressArcPaint.strokeWidth * 0.9f)
-
-    // ---------- Font metrics (perfect vertical centering) ----------
-    val fm = ResourceProvider.paintProducer.tickTextPaint.fontMetrics
-    val textCenterOffset = (fm.ascent + fm.descent) / 2f
-
-    // ---------- Value math ----------
-    val interval = (maxProgress - minProgress) / (numOfLabels - 1)
-
-    // ---------- Draw & cache labels ----------
-    for (i in 0 until numOfLabels) {
-        val angleDeg = startAngle + i * (sweepAngle / (numOfLabels - 1))
-        val angleRad = Math.toRadians(angleDeg.toDouble())
-
-        val rawValue = minProgress + i * interval
-        val displayValue = rawValue / ticksMultipler
-
-        val x = centerX + labelRadius * cos(angleRad).toFloat()
-        val y = centerY + labelRadius * sin(angleRad).toFloat() - textCenterOffset
-
-        val text = when (unit) {
-            Units.GHZ -> String.format(Locale.US, "%.1f", displayValue)
-            Units.MHZ ->
-                if (ticksMultipler > 1)
-                    String.format(Locale.US, "%.1f", displayValue)
-                else
-                    displayValue.toInt().toString()
-            else -> displayValue.toInt().toString()
-        }
-
-        ResourceProvider.paintProducer.tickTextPaint.color =
-            if (currentValue >= rawValue - labelHighlightOffset)
-                getTextColor()
-            else
-                getTickDisabledColor()
-
-        tickLabels.add(
-            TickLabel(
-                labelX = x,
-                labelY = y,
-                tickValueText = text,
-                labelValue = rawValue
+            tickLabels.add(
+                TickLabel(
+                    labelX = x,
+                    labelY = y,
+                    tickValueText = text,
+                    labelValue = rawValue
+                )
             )
-        )
 
-        canvas.drawText(text, x, y, ResourceProvider.paintProducer.tickTextPaint)
+            canvas.drawText(text, x, y, paintProducer.tickTextPaint)
+        }
+
+        isTickLabelPrepared = true
     }
-
-    isTickLabelPrepared = true
-}
-
 
 
     private fun getTickDisabledColor(): Int = if (gaugeTheme == GaugeTheme.LIGHT) {
-        ResourceProvider.colorProducer.lightBlackTextColor
+        colorProducer.lightBlackTextColor
     } else {
-        ResourceProvider.colorProducer.moreOpaqueWhite
+        colorProducer.moreOpaqueWhite
     }
 
 
@@ -666,7 +703,7 @@ private fun drawTickLabels(
 
     private var mainArc: MainArc? = null
 
-    var arcMatrix : Matrix?=null
+    var arcMatrix: Matrix? = null
 
     private fun drawArc(
         canvas: Canvas, centerX: Float, centerY: Float, radius: Float
@@ -674,18 +711,30 @@ private fun drawTickLabels(
         if (mainArc != null) {
             mainArc?.bgArc?.let { arc ->
                 // 1️⃣ Draw background arc (full sweep)
-                canvas.drawArc(arc.rect, startAngle, sweepAngle, false, ResourceProvider.paintProducer.bgArcPaint)
+                canvas.drawArc(arc.rect, startAngle, sweepAngle, false, paintProducer.bgArcPaint)
             }
             // 2️⃣ Calculate current sweep angle for progress
             val ratio = (currentValue - minProgress) / (maxProgress - minProgress)
             val progressSweep = (sweepAngle * ratio)
             mainArc?.glowArc?.let { arc ->
                 // First: wider, softer glow arc
-                canvas.drawArc(arc.rect, startAngle, progressSweep, false, ResourceProvider.paintProducer.glowArcPaint)
+                canvas.drawArc(
+                    arc.rect,
+                    startAngle,
+                    progressSweep,
+                    false,
+                    paintProducer.glowArcPaint
+                )
             }
             mainArc?.progArc?.let { arc ->
                 // 4️⃣ Draw progress arc
-                canvas.drawArc(arc.rect, startAngle, progressSweep, false, ResourceProvider.paintProducer.progressArcPaint)
+                canvas.drawArc(
+                    arc.rect,
+                    startAngle,
+                    progressSweep,
+                    false,
+                    paintProducer.progressArcPaint
+                )
             }
             return
         }
@@ -694,7 +743,7 @@ private fun drawTickLabels(
         )
 
         // 1️⃣ Draw background arc (full sweep)
-        canvas.drawArc(rect, startAngle, sweepAngle, false, ResourceProvider.paintProducer.bgArcPaint)
+        canvas.drawArc(rect, startAngle, sweepAngle, false, paintProducer.bgArcPaint)
 
         // 2️⃣ Calculate current sweep angle for progress
         val safeCurrent = currentValue.coerceIn(minProgress, maxProgress)
@@ -702,11 +751,11 @@ private fun drawTickLabels(
         val progressSweep = sweepAngle * ratio
 
         // Rotate gradient so it aligns with startAngle
-        if(arcMatrix == null){
-            arcMatrix= Matrix()
+        if (arcMatrix == null) {
+            arcMatrix = Matrix()
         }
         arcMatrix?.postRotate(startAngle - 70, centerX, centerY)
-        if(arcGradient == null){
+        if (arcGradient == null) {
             arcGradient = SweepGradient(
                 centerX, centerY, arcColors, arcColorPositions
             )
@@ -714,23 +763,23 @@ private fun drawTickLabels(
         arcGradient?.setLocalMatrix(arcMatrix)
 
         // Rotate matrix as you do for progressArcPaint
-        ResourceProvider.paintProducer.glowArcPaint.shader = arcGradient
+        paintProducer.glowArcPaint.shader = arcGradient
 
         //arc position
 
         // 1️⃣ Glow arc radius pulled slightly inside
-        val glowOffset = ResourceProvider.paintProducer.glowArcPaint.strokeWidth   // adjust to taste
+        val glowOffset = paintProducer.glowArcPaint.strokeWidth   // adjust to taste
         val glowRadius = radius - glowOffset
 
         val glowRect = RectF(
             centerX - glowRadius, centerY - glowRadius, centerX + glowRadius, centerY + glowRadius
         )
         // First: wider, softer glow arc
-        canvas.drawArc(glowRect, startAngle, progressSweep, false, ResourceProvider.paintProducer.glowArcPaint)
+        canvas.drawArc(glowRect, startAngle, progressSweep, false, paintProducer.glowArcPaint)
 
-        ResourceProvider.paintProducer.progressArcPaint.shader = arcGradient
+        paintProducer.progressArcPaint.shader = arcGradient
         // 4️⃣ Draw progress arc
-        canvas.drawArc(rect, startAngle, progressSweep, false, ResourceProvider.paintProducer.progressArcPaint)
+        canvas.drawArc(rect, startAngle, progressSweep, false, paintProducer.progressArcPaint)
         mainArc = MainArc(bgArc = Arc(rect), glowArc = Arc(glowRect), progArc = Arc(rect))
     }
 
@@ -778,7 +827,7 @@ private fun drawTickLabels(
         )
 
         // 3. Draw the bitmap
-        canvas.drawBitmap(scaledNeedleBitmap, matrix, ResourceProvider.paintProducer.needlePaint)
+        canvas.drawBitmap(scaledNeedleBitmap, matrix, paintProducer.needlePaint)
 
     }
 
@@ -799,13 +848,15 @@ private fun drawTickLabels(
         if (gaugeUnitAndValue != null) {
             gaugeUnitAndValue?.let {
                 if (isPrepared && !onPrepareGaugeValueColorSet) {
-                    ResourceProvider.paintProducer.unitTextPaint.color = if (isPrepared) getTextColor() else ResourceProvider.colorProducer.grayTextColor
-                    ResourceProvider.paintProducer.valueTextPaint.color = if (isPrepared) getTextColor() else ResourceProvider.colorProducer.grayTextColor
+                    paintProducer.unitTextPaint.color =
+                        if (isPrepared) getTextColor() else colorProducer.grayTextColor
+                    paintProducer.valueTextPaint.color =
+                        if (isPrepared) getTextColor() else colorProducer.grayTextColor
                     onPrepareGaugeValueColorSet = true
                 }
                 val valueText = getFormattedValueText()
-                canvas.drawText(valueText, it.valueX, it.valueY, ResourceProvider.paintProducer.valueTextPaint)
-                canvas.drawText(it.unitText, it.unitX, it.unitY, ResourceProvider.paintProducer.unitTextPaint)
+                canvas.drawText(valueText, it.valueX, it.valueY, paintProducer.valueTextPaint)
+                canvas.drawText(it.unitText, it.unitX, it.unitY, paintProducer.unitTextPaint)
             }
             return
         }
@@ -844,15 +895,26 @@ private fun drawTickLabels(
             }
         }
         val valueTextSize = radius * valueTextFraction
-        ResourceProvider.paintProducer.valueTextPaint.textSize = valueTextSize
-        ResourceProvider.paintProducer.valueTextPaint.color = if (isPrepared) getTextColor() else  ResourceProvider.colorProducer.grayTextColor
+        paintProducer.valueTextPaint.textSize = valueTextSize
+        paintProducer.valueTextPaint.color =
+            if (isPrepared) getTextColor() else colorProducer.grayTextColor
 
 
         val maxValueBounds = Rect()
-        ResourceProvider.paintProducer.valueTextPaint.getTextBounds(maxValuePattern, 0, maxValuePattern.length, maxValueBounds)
+        paintProducer.valueTextPaint.getTextBounds(
+            maxValuePattern,
+            0,
+            maxValuePattern.length,
+            maxValueBounds
+        )
 
         val actualValueBounds = Rect()
-        ResourceProvider.paintProducer.valueTextPaint.getTextBounds(valueText, 0, valueText.length, actualValueBounds)
+        paintProducer.valueTextPaint.getTextBounds(
+            valueText,
+            0,
+            valueText.length,
+            actualValueBounds
+        )
 
         // Unit
         val unitTextSizeFraction = if (isCustomUnit) {
@@ -877,11 +939,12 @@ private fun drawTickLabels(
             }
         }
         val unitTextSize = valueTextSize * unitTextSizeFraction
-        ResourceProvider.paintProducer.unitTextPaint.textSize = unitTextSize
-        ResourceProvider.paintProducer.unitTextPaint.color = if (isPrepared) getTextColor() else ResourceProvider.colorProducer.grayTextColor
+        paintProducer.unitTextPaint.textSize = unitTextSize
+        paintProducer.unitTextPaint.color =
+            if (isPrepared) getTextColor() else colorProducer.grayTextColor
 
         val unitBounds = Rect()
-        ResourceProvider.paintProducer.unitTextPaint.getTextBounds(unitText, 0, unitText.length, unitBounds)
+        paintProducer.unitTextPaint.getTextBounds(unitText, 0, unitText.length, unitBounds)
 
         val unitSpacing = unitTextSize * 0.2f
 
@@ -911,8 +974,8 @@ private fun drawTickLabels(
             valueX = actualValueX,
             valueY = baseY
         )
-        canvas.drawText(valueText, actualValueX, baseY, ResourceProvider.paintProducer.valueTextPaint)
-        canvas.drawText(unitText, unitX, baseY, ResourceProvider.paintProducer.unitTextPaint)
+        canvas.drawText(valueText, actualValueX, baseY, paintProducer.valueTextPaint)
+        canvas.drawText(unitText, unitX, baseY, paintProducer.unitTextPaint)
     }
 
     private fun padLeftToLength(value: String, totalLength: Int): String {
@@ -1111,20 +1174,23 @@ private fun drawTickLabels(
                 // Light background
                 setBackgroundColor(Color.TRANSPARENT)
                 // Text
-                ResourceProvider.paintProducer.valueTextPaint.color = ResourceProvider.colorProducer.blackDefaultTextColor
-                ResourceProvider.paintProducer.unitTextPaint.color = ResourceProvider.colorProducer.blackDefaultTextColor
-                ResourceProvider.paintProducer.tickTextPaint.color = ResourceProvider.colorProducer.lightBlackTextColor
+                paintProducer.valueTextPaint.color =
+                    colorProducer.blackDefaultTextColor
+                paintProducer.unitTextPaint.color =
+                    colorProducer.blackDefaultTextColor
+                paintProducer.tickTextPaint.color =
+                    colorProducer.lightBlackTextColor
 
                 // Arc
-                ResourceProvider.paintProducer.bgArcPaint.color = Color.LTGRAY
+                paintProducer.bgArcPaint.color = Color.LTGRAY
             }
 
             GaugeTheme.DARK -> {
                 setBackgroundColor(Color.TRANSPARENT)
-                ResourceProvider.paintProducer.valueTextPaint.color = Color.WHITE
-                ResourceProvider.paintProducer.unitTextPaint.color = Color.WHITE
-                ResourceProvider.paintProducer.tickTextPaint.color = Color.LTGRAY
-                ResourceProvider.paintProducer.bgArcPaint.color = Color.DKGRAY
+                paintProducer.valueTextPaint.color = Color.WHITE
+                paintProducer.unitTextPaint.color = Color.WHITE
+                paintProducer.tickTextPaint.color = Color.LTGRAY
+                paintProducer.bgArcPaint.color = Color.DKGRAY
             }
         }
 
@@ -1162,7 +1228,7 @@ private fun drawTickLabels(
 
     override fun setArcTheme(theme: GaugeArcColorTheme) {
         mainArc = null //re-draw main arc
-        arcGradient=null
+        arcGradient = null
         arcMatrix = null
         arcColors = theme.colors
         invalidate()
@@ -1187,7 +1253,7 @@ private fun drawTickLabels(
     override fun getMaxProgress(): Float = maxProgress
     override fun setTicksMultiplier(ticksMultiplier: Int) {
         this.ticksMultipler = ticksMultiplier
-        needleAnchor=null
+        needleAnchor = null
         isTickLabelPrepared = false
         invalidate()
     }
