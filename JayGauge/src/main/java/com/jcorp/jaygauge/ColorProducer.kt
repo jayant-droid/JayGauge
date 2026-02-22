@@ -13,6 +13,6 @@ class ColorProducer(context: Context) {
         )
     }
     val lightBlackTextColor by lazy { ContextCompat.getColor(context, R.color.light_black_text) }
-    val semi_white by lazy { ContextCompat.getColor(context, R.color.semi_white) }
-    val more_opaque_white by lazy { ContextCompat.getColor(context, R.color.more_opaque_white) }
+    val semiWhite by lazy { ContextCompat.getColor(context, R.color.semi_white) }
+    val moreOpaqueWhite by lazy { ContextCompat.getColor(context, R.color.more_opaque_white) }
 }

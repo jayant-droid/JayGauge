@@ -23,6 +23,7 @@ class FontProducer(context: Context) {
             R.font.uniform_extra_cond
         )
     }
+
     val uniformExtraCondensedMedium by lazy {
         ResourcesCompat.getFont(
             context,
