@@ -12,7 +12,7 @@ android {
     defaultConfig {
         minSdk = 24
 
-        version = 1
+        version = 2
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -44,7 +44,7 @@ publishing {
         create<MavenPublication>("release") {
             groupId = "com.jcorp"
             artifactId = "jaygauge"
-            version = "1.0.0-Beta02"
+            version = "1.0.1"
 
             afterEvaluate {
                 from(components["release"])
